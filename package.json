@@ -1,0 +1,22 @@
+{
+  "name": "fyreplace",
+  "version": "1.0.0",
+  "description": "Control an LED matrix for an animated display",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mrsharpoblunto/fyreplace.git"
+  },
+  "author": "Glenn Conner",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mrsharpoblunto/fyreplace/issues"
+  },
+  "homepage": "https://github.com/mrsharpoblunto/fyreplace#readme",
+  "dependencies": {
+    "rpi-led-matrix": "^1.11.1"
+  }
+}
