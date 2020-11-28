@@ -5,10 +5,10 @@
   "main": "src/server/index.mjs",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "rimraf dist/ && parcel build assets/html/index.html --no-scope-hoist --no-source-maps",
+    "build": "rimraf dist/ && parcel build src/client/index.html --no-scope-hoist --no-source-maps",
     "server": "node src/server/index.js",
     "dev:server": "nodemon --watch src/server --inspect src/server/index.mjs",
-    "dev:client": "parcel serve assets/html/index.html --port 3001",
+    "dev:client": "parcel serve src/client/index.html --port 3001",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\""
   },
   "repository": {
@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/mrsharpoblunto/fyreplace#readme",
   "dependencies": {
+    "@material-ui/core": "^4.11.1",
     "body-parser": "^1.19.0",
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.5",

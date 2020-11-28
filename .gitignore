@@ -1,3 +1,5 @@
 node_modules
 ssl
 persist
+dist
+.parcel-cache
