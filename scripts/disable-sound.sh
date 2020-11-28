@@ -13,4 +13,3 @@ reconfig() {
 }
 
 reconfig /boot/config.txt "^.*dtparam=audio.*$" "dtparam=audio=off"
-# reconfig /boot/config.txt "^.*dtparam=audio.*$" "dtparam=audio=on"
