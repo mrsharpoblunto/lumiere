@@ -21,7 +21,7 @@ export default function (vizController) {
   });
 
   light
-    .addService(hap.Service.Lightbulb, 'Fyreplace')
+    .addService(hap.Service.Lightbulb, 'Lumiere')
     .getCharacteristic(hap.Characteristic.On)
     .on(hap.CharacteristicEventTypes.SET, function (value, cb) {
       try {

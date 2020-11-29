@@ -1,5 +1,5 @@
 {
-  "name": "fyreplace",
+  "name": "Lumiere",
   "version": "1.0.0",
   "description": "Control an LED matrix for an animated display",
   "scripts": {
@@ -12,14 +12,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mrsharpoblunto/fyreplace.git"
+    "url": "git+https://github.com/mrsharpoblunto/lumiere.git"
   },
   "author": "Glenn Conner",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mrsharpoblunto/fyreplace/issues"
+    "url": "https://github.com/mrsharpoblunto/lumiere/issues"
   },
-  "homepage": "https://github.com/mrsharpoblunto/fyreplace#readme",
+  "homepage": "https://github.com/mrsharpoblunto/lumiere#readme",
   "dependencies": {
     "@material-ui/core": "^4.11.1",
     "@material-ui/icons": "^4.9.1",

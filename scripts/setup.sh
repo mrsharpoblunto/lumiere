@@ -15,8 +15,8 @@ npm run build
 ./gen-ssl-certs.sh
 
 # set the app-server to auto start on boot
-cp scripts/systemd.conf /etc/systemd/system/fyreplace.service
+cp scripts/systemd.conf /etc/systemd/system/lumiere.service
 cwd=$(pwd)
-sed -i.bak 's|CWD|'"$cwd"'|g' /etc/systemd/system/fyreplace.service
-rm /etc/systemd/system/fyreplace.service.bak
-systemctl enable fyreplace
+sed -i.bak 's|CWD|'"$cwd"'|g' /etc/systemd/system/lumiere.service
+rm /etc/systemd/system/lumiere.service.bak
+systemctl enable lumiere
