@@ -157,7 +157,7 @@ function App() {
           <Toolbar>
             <FireplaceIcon className={classes.menuIcon} />
             <Typography className={classes.header} variant="h6" noWrap>
-              Fyreplace
+              Lumiere
             </Typography>
             <Switch
               className={classes.toggleSwitch}

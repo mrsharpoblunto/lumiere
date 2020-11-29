@@ -114,7 +114,7 @@ export default function (width, height) {
   return {
     name: 'Aquarium',
     run: (matrix, dt, t) => {
-      fish.movePosition(VELOCITY * dt, 0);
+      fish.movePosition(Math.min(VELOCITY * dt, 1), 0);
       const rect = fish.getBoundingRect();
       if (rect.right < 0 || rect.left > width - 1) {
         const orientation = fish.getOrientation();
