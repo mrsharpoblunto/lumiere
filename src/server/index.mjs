@@ -75,6 +75,10 @@ app.storage = storage;
     forgiveParseErrors: true,
   });
 
+  configureApiRoutes(app);
+  configureRoutes(app);
+  await startServer(app);
+
   const selectedViz = await storage.getItem(config.VIZ_KEY) || 0;
   app.vizController = new VizController(selectedViz);
   await app.vizController.loadVisualizations();
@@ -82,10 +86,7 @@ app.storage = storage;
     app.vizController.visualizations.map((v) => v.name).join(', ') +
   "]");
 
-  configureApiRoutes(app);
-  configureRoutes(app);
-  startHomekitServer(app);
-  startServer(app);
+  await startHomekitServer(app);
 })();
 
 function configureRoutes(app) {
@@ -104,9 +105,9 @@ function configureRoutes(app) {
   });
 }
 
-function startHomekitServer(app) {
+async function startHomekitServer(app) {
   hap.init();
-  import('./light-accessory.mjs').then(i => {
+  const i = await import('./light-accessory.mjs');
     const accessory = i.default(app.vizController);
     accessory.publish({
       port: config.HOMEKIT_PORT,
@@ -114,10 +115,10 @@ function startHomekitServer(app) {
       pincode: config.HOMEKIT_PINCODE,
     });
     app.logger.info('Published HomeKit Accessory Info');
-  });
 }
 
-function startServer(app) {
+async function startServer(app) {
+  return new Promise((resolve, reject) => {
   const server = config.APP_HTTPS
     ? https.createServer(sslConfig(), app)
     : http.createServer(app);
@@ -125,6 +126,7 @@ function startServer(app) {
   server
     .listen(port, () => {
       app.logger.info('Express server awaiting connections on port ' + port);
+      resolve();
       started = true;
     })
     .on('error', err => {
@@ -135,14 +137,15 @@ function startServer(app) {
         app.logger.error(
           `Unable to listen on port ${port}. This is usually due to the process not having permissions to bind to this port. Did you mean to run the server in dev mode with a non-priviledged port instead?`,
         );
-        process.exit(1);
+        reject(err);
       } else if (err.code === 'EADDRINUSE') {
         app.logger.error(
           `Unable to listen on port ${port} because another process is already listening on this port. Do you have another instance of the server already running?`,
         );
-        process.exit(1);
+        reject(err);
       }
     });
+  });
 }
 
 function sslConfig() {

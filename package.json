@@ -2,7 +2,6 @@
   "name": "fyreplace",
   "version": "1.0.0",
   "description": "Control an LED matrix for an animated display",
-  "main": "src/server/index.mjs",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "rimraf dist/ && parcel build src/client/index.html --no-scope-hoist --no-source-maps",
@@ -23,6 +22,7 @@
   "homepage": "https://github.com/mrsharpoblunto/fyreplace#readme",
   "dependencies": {
     "@material-ui/core": "^4.11.1",
+    "@material-ui/icons": "^4.9.1",
     "body-parser": "^1.19.0",
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.5",

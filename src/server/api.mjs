@@ -18,19 +18,17 @@ export function configureApiRoutes(app) {
     app.vizController.addListener('change', listener);
   }
 
-  app.get('/api/1/poll-viz', (req, res) => {
-    const query = {
-      on: req.query.on === 'true',
-      visualization: parseInt(req.query.visualization, 10),
-    };
+  app.get('/api/1/poll-state', (req, res) => {
+    const queryState = JSON.parse(req.query.state);
 
     if (
-      JSON.stringify(query) !== JSON.stringify(app.vizController.getState())
+      JSON.stringify(queryState) !==
+      JSON.stringify(app.vizController.getState())
     ) {
       return res.json({
         success: true,
         change: true,
-        state: app.valveController.getState(),
+        state: app.vizController.getState(),
       });
     } else {
       res.writeHead(200, {
@@ -39,14 +37,14 @@ export function configureApiRoutes(app) {
       res.write(''); // flush headers to the client
       waitForVizEvent(
         req.query.timeout < 60000 ? req.query.timeout : 60000,
-        (timedOut, state) => {
+        (timedOut, event) => {
           res.write(
             JSON.stringify({
               success: true,
               change: timedOut
                 ? false
-                : JSON.stringify(query) !== JSON.stringify(state),
-              state,
+                : JSON.stringify(queryState) !== JSON.stringify(event.state),
+              state: timedOut ? null : event.state,
             }),
           );
           res.end();
@@ -90,7 +88,7 @@ export function configureApiRoutes(app) {
   app.post('/api/1/set-visualization', async (req, res) => {
     try {
       const {visualization} = await app.vizController.setVisualization(
-        parseInt(req.body.index, 10),
+        parseInt(req.body.visualization, 10),
         config.WEB_USER,
       );
       await app.storage.setItem(config.VIZ_KEY, visualization);
