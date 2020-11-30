@@ -109,7 +109,11 @@ class Fish extends Drawable {
 export default function (width, height) {
   const fish = new Fish();
   fish.setPosition(-8, 9 + Math.round(Math.random() * 14.0));
-  fish.setColors(0xffff00, 0x0000ff, 0xff0000);
+  fish.setColors(
+    {r: 255, g: 255, b: 0},
+    {r: 0, g: 0, b: 0},
+    {r: 255, g: 0, b: 0},
+  );
 
   return {
     name: 'Aquarium',
@@ -122,13 +126,25 @@ export default function (width, height) {
         const position = fish.getPosition();
         fish.setPosition(position.x, 9 + Math.round(Math.random() * 14.0));
         fish.setColors(
-          Math.round(Math.random() * 0xffffff),
-          Math.round(Math.random() * 0x888888),
-          Math.round(Math.random() * 0xffffff),
+          {
+            r: Math.round(Math.random() * 255),
+            g: Math.round(Math.random() * 255),
+            b: Math.round(Math.random() * 255),
+          },
+          {
+            r: Math.round(Math.random() * 64),
+            g: Math.round(Math.random() * 64),
+            b: Math.round(Math.random() * 64),
+          },
+          {
+            r: Math.round(Math.random() * 255),
+            g: Math.round(Math.random() * 255),
+            b: Math.round(Math.random() * 255),
+          },
         );
       }
 
-      matrix.clear().brightness(32).fgColor(0x222277).fill();
+      matrix.clear().fgColor({r: 34, g: 34, b: 119}).fill();
 
       const x = fish.getPosition().x;
 
@@ -136,11 +152,10 @@ export default function (width, height) {
         const offset =
           Math.sin((i / 16.0 + (x + 17) / 81.0) * 2.0 * (Math.PI * 2)) * 8;
         matrix
-          .fgColor(i % 2 == 0 ? 0x006600 : 0x449944)
-          .fill(i * 4, 2 + offset, i * 4, matrix.height() - 1);
+          .fgColor(i % 2 == 0 ? {r: 0, g: 102, b: 0} : {r: 68, g: 153, b: 68})
+          .drawLine(i * 4, 2 + offset, i * 4, matrix.height() - 1);
       }
 
-      matrix.brightness(64);
       fish.draw(matrix);
     },
   };

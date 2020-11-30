@@ -3,6 +3,9 @@
  */
 import React from 'react';
 import ReactDOM from 'react-dom';
+import visualizations from '../shared/viz/index.mjs';
+import {CanvasMatrix} from './canvas-matrix';
+import {MATRIX_WIDTH, MATRIX_HEIGHT} from '../shared/config.mjs';
 
 import {
   makeStyles,
@@ -99,16 +102,7 @@ function useRemoteState() {
 }
 
 function useVisualizations() {
-  const [viz, setViz] = React.useState(null);
-  if (!viz) {
-    fetch('/api/1/list-visualizations')
-      .then(res => res.json())
-      .then(res => {
-        if (res.success) {
-          setViz(res.visualizations);
-        }
-      });
-  }
+  const [viz] = React.useState(visualizations(MATRIX_WIDTH, MATRIX_HEIGHT));
   return viz;
 }
 
@@ -128,6 +122,43 @@ function selectVisualization(visualization, remoteState, setRemoteState) {
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({visualization}),
   });
+}
+
+function Visualization({viz, onClick, selected}) {
+  const canvasEl = React.useRef(null);
+  React.useEffect(() => {
+    const matrix = new CanvasMatrix(
+      MATRIX_WIDTH,
+      MATRIX_HEIGHT,
+      canvasEl.current,
+    );
+    let cleanup = false;
+    let pending = null;
+    matrix.afterSync((m, dt, t) => {
+      if (!cleanup) {
+        viz.run(m, dt, t);
+        pending = window.requestAnimationFrame(() => m.sync());
+      }
+    });
+    matrix.sync();
+    return () => {
+      cleanup = true;
+      if (pending) {
+        window.clearAnimationFrame(pending);
+      }
+    };
+  }, [viz, canvasEl]);
+
+  return (
+    <ListItem onClick={onClick} selected={selected} button>
+      <ListItemText primary={viz.name} />
+      <canvas
+        width={MATRIX_WIDTH - 1}
+        height={MATRIX_HEIGHT - 1}
+        ref={canvasEl}
+      />
+    </ListItem>
+  );
 }
 
 function App() {
@@ -169,21 +200,16 @@ function App() {
         </AppBar>
         <main className={classes.content}>
           <div className={classes.drawerHeader} />
-          {visualizations ? (
-            <List aria-label="visualizations">
-              {visualizations.map((v, index) => (
-                <ListItem
-                  onClick={() => handleSelect(index)}
-                  selected={index === state.visualization}
-                  key={v.name}
-                  button>
-                  <ListItemText primary={v.name} />
-                </ListItem>
-              ))}
-            </List>
-          ) : (
-            <CircularProgress />
-          )}
+          <List aria-label="visualizations">
+            {visualizations.map((v, index) => (
+              <Visualization
+                key={v.name}
+                onClick={() => handleSelect(index)}
+                selected={index === state.visualization}
+                viz={v}
+              />
+            ))}
+          </List>
         </main>
       </div>
     </ThemeProvider>

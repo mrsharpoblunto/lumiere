@@ -86,7 +86,6 @@ app.storage = storage;
     vizState = { visualization: 0, on: false };
   }
   app.vizController = new VizController(vizState);
-  await app.vizController.loadVisualizations();
   app.logger.info("Loaded visualizations: [" + 
     app.vizController.visualizations.map((v) => v.name).join(', ') +
   "]");

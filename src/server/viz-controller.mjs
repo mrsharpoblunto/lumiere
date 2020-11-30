@@ -4,6 +4,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import * as M from 'rpi-led-matrix';
 import * as config from './config.mjs';
+import visualizations from '../shared/viz/index.mjs';
+import {MATRIX_WIDTH, MATRIX_HEIGHT} from '../shared/config.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,8 +17,8 @@ export class VizController extends EventEmitter {
     this.matrix = new M.LedMatrix(
       {
         ...M.LedMatrix.defaultMatrixOptions(),
-        rows: 32,
-        cols: 64,
+        rows: MATRIX_HEIGHT,
+        cols: MATRIX_WIDTH,
         hardwareMapping: M.GpioMapping.AdafruitHatPwm,
         disableHardwarePulsing: process.env.NODE_ENV !== 'production',
       },
@@ -29,14 +31,7 @@ export class VizController extends EventEmitter {
     this.state = state;
     this.activeTimeout = 0;
     this.identifying = false;
-  }
-
-  async loadVisualizations() {
-    this.visualizations = await Promise.all(fs.readdirSync(path.join(__dirname, "viz"))
-      .map(async file => {
-        const i = await import("./viz/" + file)
-        return i.default(this.matrix.width(), this.matrix.height());
-      }));
+    this.visualizations = visualizations(this.matrix.width(), this.matrix.height());
     this._updateViz();
   }
 
@@ -53,7 +48,7 @@ export class VizController extends EventEmitter {
       if (count >= 0) {
         this.matrix
           .clear()
-          .fgColor(status ? 0x000000 : 0xffffff)
+          .fgColor(status ? {r:0,g:0,b:0} : {r:0, g: 0,b: 0})
           .fill(0, 0, this.matrix.width() - 1, this.matrix.height() - 1);
         --count;
         status = status ? 0 : 1;

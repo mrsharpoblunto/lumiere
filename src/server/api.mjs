@@ -73,22 +73,6 @@ export function configureApiRoutes(app) {
     }
   });
 
-  app.get('/api/1/list-visualizations', async (req, res) => {
-    try {
-      res.json({
-        success: true,
-        visualizations: app.vizController.visualizations.map((v, index) => {
-          return {index, name: v.name};
-        }),
-      });
-    } catch (err) {
-      app.logger.error(err.stack);
-      res.status(500).json({
-        success: false,
-      });
-    }
-  });
-
   app.post('/api/1/set-visualization', async (req, res) => {
     try {
       const {visualization} = await app.vizController.setVisualization(

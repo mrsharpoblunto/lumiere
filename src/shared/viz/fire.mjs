@@ -72,10 +72,6 @@ function genParticle(p) {
   return p;
 }
 
-function rgb(r, g, b) {
-  return ((255 * r) << 16) + ((255 * g) << 8) + 255 * b;
-}
-
 function lerp(v0, v1, t) {
   return v0 * (1 - t) + v1 * t;
 }
@@ -117,7 +113,7 @@ export default function (width, height) {
   return {
     name: 'Fire',
     run: (matrix, dt, t) => {
-      matrix.brightness(255).clear();
+      matrix.clear();
 
       // cycle the attractor back and forth
       for (let a of attractors) {
@@ -136,11 +132,11 @@ export default function (width, height) {
 
       // draw background gradient
       for (let i = height - 1; i >= 0; --i) {
-        const c = rgb(
-          Math.pow(i / (height - 1), 6),
-          Math.pow((i / (height - 1)) * 0.25, 6),
-          0,
-        );
+        const c = {
+          r: Math.pow(i / (height - 1), 6) * 255,
+          g: Math.pow((i / (height - 1)) * 0.25, 6) * 255,
+          b: 0,
+        };
         matrix.fgColor(c).drawLine(0, i, width - 1, i);
       }
 
@@ -150,17 +146,17 @@ export default function (width, height) {
         if (++p.age >= p.ttl) {
           genParticle(p);
         }
-        const vec = grid.getVector(p.x, p.y, grid);
+        const vec = grid.getVector(p.x, p.y);
         p.y += vec.y;
         p.x += vec.x;
 
         const l = 1.0 - p.age / p.ttl;
         const size = p.size * l * 0.5;
-        const color = rgb(
-          lerp(p.dim.r, p.bright.r, l),
-          lerp(p.dim.g, p.bright.g, l),
-          lerp(p.dim.b, p.bright.b, l),
-        );
+        const color = {
+          r: lerp(p.dim.r, p.bright.r, l) * 255,
+          g: lerp(p.dim.g, p.bright.g, l) * 255,
+          b: lerp(p.dim.b, p.bright.b, l) * 255,
+        };
 
         matrix
           .fgColor(color)
@@ -168,14 +164,14 @@ export default function (width, height) {
       }
 
       if (process.env.NODE_ENV !== 'production') {
-        matrix.fgColor(0xffffff);
+        matrix.fgColor({r: 255, g: 255, b: 255});
         for (let a of attractors) {
           matrix.setPixel(
             ((a.x + 0.5) / FLOW_GRID_RESOLUTION) * matrix.width(),
             1,
           );
         }
-        matrix.fgColor(0x0000ff);
+        matrix.fgColor({r: 0, g: 0, b: 255});
         for (let y = 0; y < grid.resolution.y; ++y) {
           for (let x = 0; x < grid.resolution.x; ++x) {
             const v = grid.vectors[y * grid.resolution.x + x];
