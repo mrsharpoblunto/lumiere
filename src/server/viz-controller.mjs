@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export class VizController extends EventEmitter {
-  constructor(selectedVisualization) {
+  constructor(state) {
     super();
 
     this.matrix = new M.LedMatrix(
@@ -18,6 +18,7 @@ export class VizController extends EventEmitter {
         rows: 32,
         cols: 64,
         hardwareMapping: M.GpioMapping.AdafruitHatPwm,
+        disableHardwarePulsing: process.env.NODE_ENV !== 'production',
       },
       {
         ...M.LedMatrix.defaultRuntimeOptions(),
@@ -25,10 +26,7 @@ export class VizController extends EventEmitter {
       },
     );
 
-    this.state = {
-      visualization: selectedVisualization,
-      on: false,
-    };
+    this.state = state;
     this.activeTimeout = 0;
     this.identifying = false;
   }
@@ -39,6 +37,7 @@ export class VizController extends EventEmitter {
         const i = await import("./viz/" + file)
         return i.default(this.matrix.width(), this.matrix.height());
       }));
+    this._updateViz();
   }
 
   identify() {

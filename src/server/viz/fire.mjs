@@ -5,54 +5,50 @@ const MAX_PARTICLES = 64;
 const MAX_SIZE = 10;
 const MIN_SIZE = 1;
 const FLOW_GRID_RESOLUTION = 8;
-const MAX_ATTRACTOR_DISTANCE = 4;
+const MAX_ATTRACTOR_DISTANCE = 6;
+const ATTRACTOR_STRENGTH = 40;
+const ATTRACTOR_JITTER = 0.01;
 
-function genFlowGrid(width, height) {
-  const grid = {
-    lookups: [],
-    vectors: [],
-    matrixWidth: width,
-    gridX: FLOW_GRID_RESOLUTION,
-    gridY: FLOW_GRID_RESOLUTION,
-  };
+class FlowGrid {
+  constructor(width, height, resolution) {
+    this.vectors = [];
+    this.width = width;
+    this.height = height;
+    this.resolution = resolution;
 
-  for (let y = 0; y < grid.gridY; ++y) {
-    for (let x = 0; x < grid.gridX; ++x) {
-      grid.vectors.push({x: 0.0, y: -1.0});
-    }
-  }
-  for (let y = 0; y < height; ++y) {
-    const ry = Math.floor((y / height) * FLOW_GRID_RESOLUTION);
-    for (let x = 0; x < width; ++x) {
-      const rx = Math.floor((x / width) * FLOW_GRID_RESOLUTION);
-      grid.lookups.push(ry * grid.gridY + rx);
-    }
-  }
-  return grid;
-}
-
-function adjustFlowGrid(attractors, grid) {
-  for (let y = 0; y < grid.gridY; ++y) {
-    for (let x = 0; x < grid.gridX; ++x) {
-      const v = grid.vectors[y * grid.gridY + x];
-      for (let a of attractors) {
-        const attractorDirection = {x: a.x - x, y: a.y - y};
-        const distance = vecLength(attractorDirection);
-        attractorDirection.x /= distance;
-        attractorDirection.y /= distance;
-        const scaledDistance =
-          Math.min(distance, MAX_ATTRACTOR_DISTANCE) / MAX_ATTRACTOR_DISTANCE;
-        v.x += attractorDirection.x * scaledDistance;
-        v.y += attractorDirection.y * scaledDistance;
+    for (let y = 0; y < this.resolution.y; ++y) {
+      for (let x = 0; x < this.resolution.x; ++x) {
+        this.vectors.push({x: 0.0, y: -1.0});
       }
-      vecNormalize(v);
     }
   }
-}
 
-function getFlowGridVector(x, y, grid) {
-  const lookup = Math.floor(y) * grid.matrixWidth + Math.floor(x);
-  return grid.vectors[grid.lookups[lookup]];
+  adjust(attractors) {
+    for (let y = 0; y < this.resolution.y; ++y) {
+      for (let x = 0; x < this.resolution.x; ++x) {
+        const v = this.vectors[y * this.resolution.y + x];
+        v.y = -1;
+        v.x = 0;
+        for (let a of attractors) {
+          const attractorDirection = {x: a.x - x, y: a.y - y};
+          const distance = vecLength(attractorDirection);
+          attractorDirection.x /= distance;
+          attractorDirection.y /= distance;
+          const scaledDistance =
+            Math.min(distance, a.maxDistance) / a.maxDistance;
+          v.x += attractorDirection.x * (1.0 - scaledDistance) * a.strength;
+          v.y += attractorDirection.y * (1.0 - scaledDistance) * a.strength;
+        }
+        vecNormalize(v);
+      }
+    }
+  }
+
+  getVector(x, y) {
+    const ry = Math.floor((y / this.height) * this.resolution.y);
+    const rx = Math.floor((x / this.width) * this.resolution.x);
+    return this.vectors[ry * this.resolution.x + rx];
+  }
 }
 
 function initParticles() {
@@ -97,10 +93,25 @@ function vecLength(v) {
 
 export default function (width, height) {
   const particles = initParticles();
-  const grid = genFlowGrid(width, height);
+  const grid = new FlowGrid(width, height, {
+    x: FLOW_GRID_RESOLUTION,
+    y: FLOW_GRID_RESOLUTION,
+  });
   const attractors = [
-    {x: 0, y: -1, dx: Math.random() * 0.04 - 0.02},
-    {x: FLOW_GRID_RESOLUTION, y: -1, dx: Math.random() * 0.04 - 0.02},
+    {
+      x: 0,
+      y: -1,
+      dx: Math.random() * 0.04 - 0.02,
+      strength: ATTRACTOR_STRENGTH,
+      maxDistance: MAX_ATTRACTOR_DISTANCE,
+    },
+    {
+      x: FLOW_GRID_RESOLUTION - 1,
+      y: -1,
+      dx: Math.random() * 0.04 - 0.02,
+      strength: ATTRACTOR_STRENGTH,
+      maxDistance: MAX_ATTRACTOR_DISTANCE,
+    },
   ];
 
   return {
@@ -110,18 +121,18 @@ export default function (width, height) {
 
       // cycle the attractor back and forth
       for (let a of attractors) {
-        //a.x += a.dx;
-        if (Math.random() < 0.1) {
-          //a.dx *= -1;
+        a.x += a.dx;
+        if (Math.random() < ATTRACTOR_JITTER) {
+          a.dx *= -1;
         }
-        if (a.x > FLOW_GRID_RESOLUTION - 1) {
+        if (a.x > grid.resolution.x - 1) {
           a.dx = Math.abs(a.dx) * -1;
         }
         if (a.x < 0) {
           a.dx = Math.abs(a.dx);
         }
       }
-      adjustFlowGrid(attractors, grid);
+      grid.adjust(attractors);
 
       // draw background gradient
       for (let i = height - 1; i >= 0; --i) {
@@ -139,7 +150,7 @@ export default function (width, height) {
         if (++p.age >= p.ttl) {
           genParticle(p);
         }
-        const vec = getFlowGridVector(p.x, p.y, grid);
+        const vec = grid.getVector(p.x, p.y, grid);
         p.y += vec.y;
         p.x += vec.x;
 
@@ -154,6 +165,32 @@ export default function (width, height) {
         matrix
           .fgColor(color)
           .fill(p.x - size, p.y - size, p.x + size, p.y + size);
+      }
+
+      if (process.env.NODE_ENV !== 'production') {
+        matrix.fgColor(0xffffff);
+        for (let a of attractors) {
+          matrix.setPixel(
+            ((a.x + 0.5) / FLOW_GRID_RESOLUTION) * matrix.width(),
+            1,
+          );
+        }
+        matrix.fgColor(0x0000ff);
+        for (let y = 0; y < grid.resolution.y; ++y) {
+          for (let x = 0; x < grid.resolution.x; ++x) {
+            const v = grid.vectors[y * grid.resolution.x + x];
+            const center = {
+              x: ((x + 0.5) / grid.resolution.x) * matrix.width(),
+              y: ((y + 0.5) / grid.resolution.y) * matrix.height(),
+            };
+            matrix.drawLine(
+              center.x - v.x,
+              center.y - v.y,
+              center.x + v.x,
+              center.y + v.y,
+            );
+          }
+        }
       }
     },
   };

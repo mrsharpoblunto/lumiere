@@ -79,8 +79,13 @@ app.storage = storage;
   configureRoutes(app);
   await startServer(app);
 
-  const selectedViz = await storage.getItem(config.VIZ_KEY) || 0;
-  app.vizController = new VizController(selectedViz);
+  let vizState = await storage.getItem(config.VIZ_KEY);
+  if (vizState) {
+    vizState = JSON.parse(vizState);
+  } else {
+    vizState = { visualization: 0, on: false };
+  }
+  app.vizController = new VizController(vizState);
   await app.vizController.loadVisualizations();
   app.logger.info("Loaded visualizations: [" + 
     app.vizController.visualizations.map((v) => v.name).join(', ') +

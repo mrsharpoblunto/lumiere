@@ -56,6 +56,10 @@ export function configureApiRoutes(app) {
   app.post('/api/1/toggle-on', async (req, res) => {
     try {
       const {on} = app.vizController.toggleOn(config.WEB_USER);
+      await app.storage.setItem(
+        config.VIZ_KEY,
+        JSON.stringify(app.vizController.getState()),
+      );
       app.logger.info('Set on state to ' + on);
       res.json({
         success: true,
@@ -91,7 +95,10 @@ export function configureApiRoutes(app) {
         parseInt(req.body.visualization, 10),
         config.WEB_USER,
       );
-      await app.storage.setItem(config.VIZ_KEY, visualization);
+      await app.storage.setItem(
+        config.VIZ_KEY,
+        JSON.stringify(app.vizController.getState()),
+      );
       app.logger.info(
         'Set viz to ' + app.vizController.visualizations[visualization].name,
       );

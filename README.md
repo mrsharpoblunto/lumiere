@@ -7,5 +7,5 @@ Run ```./scripts/setup.sh```
 
 ## Usage
 
-- Add to HomeKit by entering the pin in src/server/config.mjs
+- Add to HomeKit by entering the pin in `HOMEKIT_PINCODE` in `src/server/config.mjs`
 - Navigate to the webUI on https://<address_of_pi/

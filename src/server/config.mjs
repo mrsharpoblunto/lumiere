@@ -27,7 +27,7 @@ export const HOMEKIT_PINCODE = '031-45-155';
 export const MANUFACTURER = 'Glenn Conner';
 export const MODEL = 'Rev 1';
 export const SERIAL = '0001';
-export const VIZ_KEY = 'history';
+export const VIZ_KEY = 'viz_state';
 export const WEB_USER = 'web user';
 export const HOMEKIT_USER = 'HomeKit user';
 // TODO matrix properties should go here too...
