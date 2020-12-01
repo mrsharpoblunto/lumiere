@@ -124,7 +124,16 @@ function selectVisualization(visualization, remoteState, setRemoteState) {
   });
 }
 
-function Visualization({viz, onClick, selected}) {
+function VisualizationItem({viz, onClick, selected}) {
+  return (
+    <ListItem onClick={onClick} selected={selected} button>
+      <ListItemText primary={viz.name} />
+      <Visualization viz={viz} />
+    </ListItem>
+  );
+}
+
+function Visualization(props) {
   const canvasEl = React.useRef(null);
   React.useEffect(() => {
     const matrix = new CanvasMatrix(
@@ -136,7 +145,7 @@ function Visualization({viz, onClick, selected}) {
     let pending = null;
     matrix.afterSync((m, dt, t) => {
       if (!cleanup) {
-        viz.run(m, dt, t);
+        props.viz.run(m, dt, t);
         pending = window.requestAnimationFrame(() => m.sync());
       }
     });
@@ -147,17 +156,15 @@ function Visualization({viz, onClick, selected}) {
         window.clearAnimationFrame(pending);
       }
     };
-  }, [viz, canvasEl]);
+  }, [props.viz, canvasEl]);
 
   return (
-    <ListItem onClick={onClick} selected={selected} button>
-      <ListItemText primary={viz.name} />
-      <canvas
-        width={MATRIX_WIDTH - 1}
-        height={MATRIX_HEIGHT - 1}
-        ref={canvasEl}
-      />
-    </ListItem>
+    <canvas
+      {...props}
+      ref={canvasEl}
+      width={MATRIX_WIDTH}
+      height={MATRIX_HEIGHT}
+    />
   );
 }
 
@@ -179,6 +186,16 @@ function App() {
       }),
     [prefersDarkMode],
   );
+
+  if (window.location.hash) {
+    const index = parseInt(window.location.hash.substr(1), 10);
+    return (
+      <Visualization
+        viz={visualizations[index]}
+        style={{width: '100%', height: '100%'}}
+      />
+    );
+  }
 
   return (
     <ThemeProvider theme={theme}>
@@ -202,7 +219,7 @@ function App() {
           <div className={classes.drawerHeader} />
           <List aria-label="visualizations">
             {visualizations.map((v, index) => (
-              <Visualization
+              <VisualizationItem
                 key={v.name}
                 onClick={() => handleSelect(index)}
                 selected={index === state.visualization}

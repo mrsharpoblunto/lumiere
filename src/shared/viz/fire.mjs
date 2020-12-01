@@ -1,6 +1,8 @@
 /**
  * @format
  */
+import {lerp, vecLength, vecNormalize} from './helpers.mjs';
+
 const MAX_PARTICLES = 64;
 const MAX_SIZE = 10;
 const MIN_SIZE = 1;
@@ -70,21 +72,6 @@ function genParticle(p) {
   p.size = MIN_SIZE + Math.random() * (MAX_SIZE - MIN_SIZE);
   p.age = 0;
   return p;
-}
-
-function lerp(v0, v1, t) {
-  return v0 * (1 - t) + v1 * t;
-}
-
-function vecNormalize(v) {
-  const l = vecLength(v);
-  v.x /= l;
-  v.y /= l;
-  return v;
-}
-
-function vecLength(v) {
-  return Math.sqrt(Math.pow(v.x, 2) + Math.pow(v.y, 2));
 }
 
 export default function (width, height) {
