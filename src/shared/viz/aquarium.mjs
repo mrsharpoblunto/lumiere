@@ -290,7 +290,11 @@ export default function (width, height) {
 
       //background
       for (let y = 0; y < height; ++y) {
-        const water = {r: WATER.r - y, g: WATER.g - y, b: WATER.b - y * 4};
+        const water = {
+          r: Math.max(0, WATER.r - y),
+          g: WATER.g - y,
+          b: WATER.b - y * 2,
+        };
         if (y > height - FLOOR_LAYERS) {
           const layer = y - (height - FLOOR_LAYERS);
           const light = lerp(water, SAND_BASE, layer / FLOOR_LAYERS);
