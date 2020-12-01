@@ -2,6 +2,7 @@
  * @format
  */
 import {lerp, vecLength, vecNormalize} from './helpers.mjs';
+import {FlowGrid} from './flow-grid.mjs';
 
 const MAX_PARTICLES = 64;
 const MAX_SIZE = 10;
@@ -10,48 +11,6 @@ const FLOW_GRID_RESOLUTION = 8;
 const MAX_ATTRACTOR_DISTANCE = 6;
 const ATTRACTOR_STRENGTH = 40;
 const ATTRACTOR_JITTER = 0.01;
-
-class FlowGrid {
-  constructor(width, height, resolution) {
-    this.vectors = [];
-    this.width = width;
-    this.height = height;
-    this.resolution = resolution;
-
-    for (let y = 0; y < this.resolution.y; ++y) {
-      for (let x = 0; x < this.resolution.x; ++x) {
-        this.vectors.push({x: 0.0, y: -1.0});
-      }
-    }
-  }
-
-  adjust(attractors) {
-    for (let y = 0; y < this.resolution.y; ++y) {
-      for (let x = 0; x < this.resolution.x; ++x) {
-        const v = this.vectors[y * this.resolution.y + x];
-        v.y = -1;
-        v.x = 0;
-        for (let a of attractors) {
-          const attractorDirection = {x: a.x - x, y: a.y - y};
-          const distance = vecLength(attractorDirection);
-          attractorDirection.x /= distance;
-          attractorDirection.y /= distance;
-          const scaledDistance =
-            Math.min(distance, a.maxDistance) / a.maxDistance;
-          v.x += attractorDirection.x * (1.0 - scaledDistance) * a.strength;
-          v.y += attractorDirection.y * (1.0 - scaledDistance) * a.strength;
-        }
-        vecNormalize(v);
-      }
-    }
-  }
-
-  getVector(x, y) {
-    const ry = Math.floor((y / this.height) * this.resolution.y);
-    const rx = Math.floor((x / this.width) * this.resolution.x);
-    return this.vectors[ry * this.resolution.x + rx];
-  }
-}
 
 function initParticles() {
   const particles = [];
@@ -154,7 +113,7 @@ export default function (width, height) {
         matrix.fgColor({r: 255, g: 255, b: 255});
         for (let a of attractors) {
           matrix.setPixel(
-            ((a.x + 0.5) / FLOW_GRID_RESOLUTION) * matrix.width(),
+            ((a.x + 0.5) / grid.resolution.x) * matrix.width(),
             1,
           );
         }

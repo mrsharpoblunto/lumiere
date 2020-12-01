@@ -1,17 +1,22 @@
 /**
  * @format
  */
-import {lerp} from './helpers.mjs';
+import {lerp, vecLength, vecNormalize} from './helpers.mjs';
+import {FlowGrid} from './flow-grid.mjs';
+
 const FLOOR_LAYERS = 8;
-const SAND_BASE = {r: 255, g: 255, b: 128};
-const SAND_DARK = {r: 200, g: 200, b: 32};
+const SAND_BASE = {r: 128, g: 128, b: 64};
+const SAND_DARK = {r: 64, g: 64, b: 16};
 const SAND_TEXTURE_DENSITY = 5;
 const KELP = {r: 0, g: 102, b: 0};
 const KELP_DENSITY = 4;
-const WATER = {r: 32, g: 96, b: 255};
-const WATER_BASE = {r: 0, g: 64, b: 128};
+const WATER = {r: 16, g: 32, b: 128};
+const WATER_BASE = {r: 0, g: 32, b: 64};
 const FISH_COUNT = 2;
 const FISH_VELOCITY = 10;
+const FLOW_GRID_RESOLUTION = 8;
+const MAX_ATTRACTOR_DISTANCE = 5;
+const ATTRACTOR_STRENGTH = 0.3;
 
 class Movable {
   constructor(top, left, bottom, right) {
@@ -125,9 +130,9 @@ class Fish extends Movable {
 
 class Kelp {
   constructor(anchorX, anchorY, layer, length) {
-    this._anchorX = anchorX;
-    this._anchorY = anchorY;
-    this._length = length;
+    this.anchor = {x: anchorX, y: anchorY};
+    this.effector = {x: anchorX, y: anchorY - length};
+    this.length = length;
     this._color = {...KELP};
     this._color.g += (Math.random() - 0.5) * KELP.g * 0.1;
     this._lerpFactor = 1.0 - layer / FLOOR_LAYERS;
@@ -138,12 +143,7 @@ class Kelp {
 
     matrix
       .fgColor(color)
-      .drawLine(
-        this._anchorX,
-        this._anchorY - this._length,
-        this._anchorX,
-        this._anchorY,
-      );
+      .drawLine(this.effector.x, this.effector.y, this.anchor.x, this.anchor.y);
   }
 }
 
@@ -155,6 +155,7 @@ function spawnFish(movable, width, height) {
   const y =
     Math.random() * (height - m.height - FLOOR_LAYERS + layer) - m.yOffset;
   const xOffset = (Math.random() + 0.5) * Math.abs(m.xOffset);
+  const lerpFactor = Math.min(layer / FLOOR_LAYERS + 0.5, 1.0);
 
   m.setVelocity(FISH_VELOCITY * (Math.random() + 0.5), 0.0);
   m.setOrientation(orientation, 1);
@@ -168,7 +169,7 @@ function spawnFish(movable, width, height) {
         g: Math.round(Math.random() * 255),
         b: Math.round(Math.random() * 255),
       },
-      layer / FLOOR_LAYERS,
+      lerpFactor,
     ),
     lerp(
       WATER_BASE,
@@ -177,7 +178,7 @@ function spawnFish(movable, width, height) {
         g: Math.round(Math.random() * 64),
         b: Math.round(Math.random() * 64),
       },
-      layer / FLOOR_LAYERS,
+      lerpFactor,
     ),
     lerp(
       WATER_BASE,
@@ -186,13 +187,28 @@ function spawnFish(movable, width, height) {
         g: Math.round(Math.random() * 255),
         b: Math.round(Math.random() * 255),
       },
-      layer / FLOOR_LAYERS,
+      lerpFactor,
     ),
   );
   movable[layer].push(m);
 }
 
 export default function (width, height) {
+  const grid = new FlowGrid(width, height, {
+    x: FLOW_GRID_RESOLUTION,
+    y: FLOW_GRID_RESOLUTION,
+  });
+  const attractors = [
+    {
+      x: 0,
+      y: -2,
+      theta: Math.PI,
+      phi: 0.01,
+      strength: ATTRACTOR_STRENGTH,
+      maxDistance: MAX_ATTRACTOR_DISTANCE,
+    },
+  ];
+
   const sandTexture = [];
   for (let i = 0; i < SAND_TEXTURE_DENSITY * FLOOR_LAYERS; ++i) {
     sandTexture.push(Math.random() * (width - 1));
@@ -206,9 +222,9 @@ export default function (width, height) {
       kelpLayer.push(
         new Kelp(
           Math.random() * (width - 1),
-          height - FLOOR_LAYERS + i,
+          height - 1 - FLOOR_LAYERS + i,
           i,
-          Math.random() * height - i,
+          Math.random() * (height - 1 - FLOOR_LAYERS + i),
         ),
       );
     }
@@ -223,6 +239,36 @@ export default function (width, height) {
   return {
     name: 'Aquarium',
     run: (matrix, dt, t) => {
+      // cycle the attractors back and forth
+      for (let a of attractors) {
+        a.theta += a.phi;
+        if (a.theta > Math.PI * 2) {
+          a.theta = 0;
+        }
+        a.x =
+          grid.resolution.x / 2 + Math.sin(a.theta) * (grid.resolution.x / 1.5);
+      }
+      grid.adjust(attractors);
+      // move kelp
+      for (let layer = 0; layer < FLOOR_LAYERS; ++layer) {
+        for (let k of kelp[layer]) {
+          const vec = grid.getVector(k.effector.x, k.effector.y);
+          k.effector.x += vec.x;
+          k.effector.y += vec.y;
+          const newEffector = vecNormalize({
+            x: k.effector.x - k.anchor.x,
+            y: k.effector.y - k.anchor.y,
+          });
+          newEffector.x *= k.length;
+          newEffector.y *= k.length;
+          newEffector.x += k.anchor.x;
+          newEffector.y += k.anchor.y;
+          newEffector.x = Math.min(Math.max(0, newEffector.x), width - 1);
+          newEffector.y = Math.min(Math.max(0, newEffector.y), height - 1);
+          k.effector = newEffector;
+        }
+      }
+
       // move objects around
       let respawn = 0;
       for (let layer = 0; layer < FLOOR_LAYERS; ++layer) {
@@ -267,6 +313,32 @@ export default function (width, height) {
         }
         for (let m of movable[layer]) {
           m.draw(matrix);
+        }
+      }
+
+      if (process.env.NODE_ENV !== 'production') {
+        matrix.fgColor({r: 255, g: 255, b: 255});
+        for (let a of attractors) {
+          matrix.setPixel(
+            ((a.x + 0.5) / grid.resolution.x) * matrix.width(),
+            1,
+          );
+        }
+        matrix.fgColor({r: 0, g: 0, b: 255});
+        for (let y = 0; y < grid.resolution.y; ++y) {
+          for (let x = 0; x < grid.resolution.x; ++x) {
+            const v = grid.vectors[y * grid.resolution.x + x];
+            const center = {
+              x: ((x + 0.5) / grid.resolution.x) * matrix.width(),
+              y: ((y + 0.5) / grid.resolution.y) * matrix.height(),
+            };
+            matrix.drawLine(
+              center.x - v.x,
+              center.y - v.y,
+              center.x + v.x,
+              center.y + v.y,
+            );
+          }
         }
       }
     },
