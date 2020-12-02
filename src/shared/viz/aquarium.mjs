@@ -17,6 +17,7 @@ const FISH_VELOCITY = 10;
 const FLOW_GRID_RESOLUTION = 8;
 const MAX_ATTRACTOR_DISTANCE = 5;
 const ATTRACTOR_STRENGTH = 0.3;
+const ITERATIONS = 1;
 
 class Movable {
   constructor(top, left, bottom, right) {
@@ -129,10 +130,18 @@ class Fish extends Movable {
 }
 
 class Kelp {
-  constructor(anchorX, anchorY, layer, length) {
-    this.anchor = {x: anchorX, y: anchorY};
-    this.effector = {x: anchorX, y: anchorY - length};
-    this.length = length;
+  constructor(anchorX, anchorY, layer, length, segments) {
+    const segmentLength = length / segments;
+    this.chain = [{x: anchorX, y: anchorY, l: segmentLength}];
+    while (segments-- > 0) {
+      const last = this.chain[this.chain.length - 1];
+      const current = {
+        x: last.x,
+        y: last.y - segmentLength,
+        l: segmentLength,
+      };
+      this.chain.push(current);
+    }
     this._color = {...KELP};
     this._color.g += (Math.random() - 0.5) * KELP.g * 0.1;
     this._lerpFactor = 1.0 - layer / FLOOR_LAYERS;
@@ -141,14 +150,52 @@ class Kelp {
   draw(matrix, water) {
     const color = lerp(this._color, water, this._lerpFactor);
 
-    matrix
-      .fgColor(color)
-      .drawLine(this.effector.x, this.effector.y, this.anchor.x, this.anchor.y);
+    matrix.fgColor(color);
+    let prev = this.chain[0];
+    for (let i = 1; i < this.chain.length; ++i) {
+      matrix.drawLine(prev.x, prev.y, this.chain[i].x, this.chain[i].y);
+      prev = this.chain[i];
+    }
+  }
+
+  getEffector() {
+    return this.chain[this.chain.length - 1];
+  }
+}
+
+function fabrikSolve(chain, goal, iterations) {
+  const anchorGoal = {...chain[0]};
+  while (iterations-- > 0) {
+    for (let i = chain.length - 1; i > 0; --i) {
+      const c = chain[i];
+      const p = chain[i - 1];
+      c.x = goal.x;
+      c.y = goal.y;
+      const newSegment = {x: c.x - p.x, y: c.y - p.y};
+      vecNormalize(newSegment);
+      p.x = goal.x - p.l * newSegment.x;
+      p.y = goal.y - p.l * newSegment.y;
+      goal = p;
+    }
+
+    goal = anchorGoal;
+    for (let i = 0; i < chain.length - 1; ++i) {
+      const c = chain[i];
+      const p = chain[i + 1];
+      c.x = goal.x;
+      c.y = goal.y;
+      const newSegment = {x: c.x - p.x, y: c.y - p.y};
+      vecNormalize(newSegment);
+      p.x = goal.x - p.l * newSegment.x;
+      p.y = goal.y - p.l * newSegment.y;
+      goal = p;
+    }
   }
 }
 
 function spawnFish(movable, width, height) {
   const m = new Fish();
+  m.factory = spawnFish;
 
   const layer = Math.round(Math.random() * (FLOOR_LAYERS - 1));
   const orientation = Math.sign(Math.random() - 0.5);
@@ -201,9 +248,17 @@ export default function (width, height) {
   const attractors = [
     {
       x: 0,
-      y: -2,
+      y: 1,
       theta: Math.PI,
       phi: 0.01,
+      strength: ATTRACTOR_STRENGTH,
+      maxDistance: MAX_ATTRACTOR_DISTANCE,
+    },
+    {
+      x: 0,
+      y: 0,
+      theta: 0,
+      phi: 0.015,
       strength: ATTRACTOR_STRENGTH,
       maxDistance: MAX_ATTRACTOR_DISTANCE,
     },
@@ -225,6 +280,7 @@ export default function (width, height) {
           height - 1 - FLOOR_LAYERS + i,
           i,
           Math.random() * (height - 1 - FLOOR_LAYERS + i),
+          4,
         ),
       );
     }
@@ -246,31 +302,29 @@ export default function (width, height) {
           a.theta = 0;
         }
         a.x =
-          grid.resolution.x / 2 + Math.sin(a.theta) * (grid.resolution.x / 1.5);
+          grid.resolution.x / 2 + Math.sin(a.theta) * (grid.resolution.x / 2);
       }
       grid.adjust(attractors);
+
       // move kelp
       for (let layer = 0; layer < FLOOR_LAYERS; ++layer) {
         for (let k of kelp[layer]) {
-          const vec = grid.getVector(k.effector.x, k.effector.y);
-          k.effector.x += vec.x;
-          k.effector.y += vec.y;
-          const newEffector = vecNormalize({
-            x: k.effector.x - k.anchor.x,
-            y: k.effector.y - k.anchor.y,
-          });
-          newEffector.x *= k.length;
-          newEffector.y *= k.length;
-          newEffector.x += k.anchor.x;
-          newEffector.y += k.anchor.y;
-          newEffector.x = Math.min(Math.max(0, newEffector.x), width - 1);
-          newEffector.y = Math.min(Math.max(0, newEffector.y), height - 1);
-          k.effector = newEffector;
+          const startEffector = {...k.getEffector()};
+          const vec = grid.getVector(
+            Math.min(width - 1, Math.max(0, startEffector.x)),
+            Math.min(height - 1, Math.max(0, startEffector.y)),
+          );
+
+          const endEffector = {
+            x: startEffector.x + vec.x,
+            y: startEffector.y + vec.y,
+          };
+          fabrikSolve(k.chain, endEffector, ITERATIONS);
         }
       }
 
       // move objects around
-      let respawn = 0;
+      let respawn = [];
       for (let layer = 0; layer < FLOOR_LAYERS; ++layer) {
         for (let i = movable[layer].length - 1; i >= 0; --i) {
           const m = movable[layer][i];
@@ -278,12 +332,12 @@ export default function (width, height) {
           const rect = m.getBoundingRect();
           if (rect.right < 0 || rect.left > width - 1) {
             movable[layer].splice(i, 1);
-            respawn++;
+            respawn.push(m.factory);
           }
         }
       }
-      while (respawn-- > 0) {
-        spawnFish(movable, width, height);
+      for (let f of respawn) {
+        f(movable, width, height);
       }
 
       matrix.clear();

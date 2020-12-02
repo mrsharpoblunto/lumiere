@@ -26,12 +26,14 @@ export class FlowGrid {
         for (let a of attractors) {
           const attractorDirection = {x: a.x - x, y: a.y - y};
           const distance = vecLength(attractorDirection);
-          attractorDirection.x /= distance;
-          attractorDirection.y /= distance;
-          const scaledDistance =
-            Math.min(distance, a.maxDistance) / a.maxDistance;
-          v.x += attractorDirection.x * (1.0 - scaledDistance) * a.strength;
-          v.y += attractorDirection.y * (1.0 - scaledDistance) * a.strength;
+          if (distance !== 0) {
+            attractorDirection.x /= distance;
+            attractorDirection.y /= distance;
+            const scaledDistance =
+              Math.min(distance, a.maxDistance) / a.maxDistance;
+            v.x += attractorDirection.x * (1.0 - scaledDistance) * a.strength;
+            v.y += attractorDirection.y * (1.0 - scaledDistance) * a.strength;
+          }
         }
         vecNormalize(v);
       }
