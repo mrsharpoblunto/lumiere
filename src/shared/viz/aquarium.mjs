@@ -10,7 +10,7 @@ const SAND_DARK = {r: 64, g: 64, b: 16};
 const SAND_TEXTURE_DENSITY = 5;
 const KELP = {r: 0, g: 102, b: 0};
 const KELP_DENSITY = 4;
-const WATER = {r: 16, g: 32, b: 128};
+const WATER = {r: 0, g: 16, b: 96};
 const WATER_BASE = {r: 0, g: 32, b: 64};
 const FISH_COUNT = 2;
 const FISH_VELOCITY = 10;
@@ -344,7 +344,11 @@ export default function (width, height) {
 
       //background
       for (let y = 0; y < height; ++y) {
-        const water = {r: WATER.r - y, g: WATER.g - y, b: WATER.b - y * 4};
+        const water = {
+          r: Math.max(0, WATER.r - y),
+          g: Math.max(0, WATER.g - y),
+          b: Math.max(0, WATER.b - y * 2),
+        };
         if (y > height - FLOOR_LAYERS) {
           const layer = y - (height - FLOOR_LAYERS);
           const light = lerp(water, SAND_BASE, layer / FLOOR_LAYERS);
