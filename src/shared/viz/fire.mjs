@@ -33,6 +33,29 @@ function genParticle(p) {
   return p;
 }
 
+function applyPointAttractors(grid, attractors) {
+  for (let y = 0; y < grid.resolution.y; ++y) {
+    for (let x = 0; x < grid.resolution.x; ++x) {
+      const v = grid.vectors[y * grid.resolution.y + x];
+      v.y = -1;
+      v.x = 0;
+      for (let a of attractors) {
+        const attractorDirection = {x: a.x - x, y: a.y - y};
+        const distance = vecLength(attractorDirection);
+        if (distance !== 0) {
+          attractorDirection.x /= distance;
+          attractorDirection.y /= distance;
+          const scaledDistance =
+            Math.min(distance, a.maxDistance) / a.maxDistance;
+          v.x += attractorDirection.x * (1.0 - scaledDistance) * a.strength;
+          v.y += attractorDirection.y * (1.0 - scaledDistance) * a.strength;
+        }
+      }
+      vecNormalize(v);
+    }
+  }
+}
+
 export default function (width, height) {
   const particles = initParticles();
   const grid = new FlowGrid(width, height, {
@@ -74,7 +97,7 @@ export default function (width, height) {
           a.dx = Math.abs(a.dx);
         }
       }
-      grid.adjust(attractors);
+      applyPointAttractors(grid, attractors);
 
       // draw background gradient
       for (let i = height - 1; i >= 0; --i) {

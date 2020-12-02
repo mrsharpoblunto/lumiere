@@ -1,7 +1,7 @@
 /**
  * @format
  */
-import {lerp, vecLength, vecNormalize} from './helpers.mjs';
+import {lerp, mul, vecLength, vecNormalize} from './helpers.mjs';
 import {FlowGrid} from './flow-grid.mjs';
 
 const FLOOR_LAYERS = 8;
@@ -15,8 +15,11 @@ const WATER_BASE = {r: 0, g: 32, b: 64};
 const FISH_COUNT = 2;
 const FISH_VELOCITY = 10;
 const FLOW_GRID_RESOLUTION = 8;
-const MAX_ATTRACTOR_DISTANCE = 5;
-const ATTRACTOR_STRENGTH = 0.3;
+const BUBBLE_DENSITY = 1;
+const BUBBLE_RISING_SPEED = 0.2;
+const MAX_WAVE_DEPTH = 6;
+const WAVE_STRENGTH = 0.6;
+const WAVE_SPEED = 0.06;
 const ITERATIONS = 1;
 
 class Movable {
@@ -87,23 +90,25 @@ class Fish extends Movable {
   draw(matrix) {
     matrix
       .fgColor(this._main)
+      .fill(this.x(-7), this.y(-5), this.x(6), this.y(5))
+      .fgColor(this._mainDark)
       .drawLine(this.x(8), this.y(-1), this.x(8), this.y(1))
       .drawLine(this.x(8), this.y(1), this.x(6), this.y(1))
       .drawLine(this.x(6), this.y(1), this.x(6), this.y(5))
       .drawLine(this.x(6), this.y(5), this.x(-7), this.y(5))
       .drawLine(this.x(-7), this.y(5), this.x(-7), this.y(7))
-      .drawLine(this.x(-7), this.y(7), this.x(-9), this.y(7))
-      .drawLine(this.x(-9), this.y(7), this.x(-9), this.y(-7))
-      .drawLine(this.x(-9), this.y(-7), this.x(-7), this.y(-7))
       .drawLine(this.x(-7), this.y(-7), this.x(-7), this.y(-5))
-      .drawLine(this.x(-7), this.y(-5), this.x(6), this.y(-5))
-      .drawLine(this.x(6), this.y(-5), this.x(6), this.y(-1))
-      .drawLine(this.x(6), this.y(-1), this.x(8), this.y(-1))
-      .fill(this.x(-7), this.y(-5), this.x(6), this.y(5))
+      .drawLine(this.x(-7), this.y(7), this.x(-9), this.y(7))
       //fin 1
       .drawLine(this.x(-2), this.y(5), this.x(-2), this.y(8))
       .drawLine(this.x(-2), this.y(8), this.x(0), this.y(8))
       .drawLine(this.x(0), this.y(8), this.x(0), this.y(5))
+      .fgColor(this._mainBright)
+      .drawLine(this.x(-9), this.y(7), this.x(-9), this.y(-7))
+      .drawLine(this.x(-9), this.y(-7), this.x(-7), this.y(-7))
+      .drawLine(this.x(-7), this.y(-5), this.x(6), this.y(-5))
+      .drawLine(this.x(6), this.y(-5), this.x(6), this.y(-1))
+      .drawLine(this.x(6), this.y(-1), this.x(8), this.y(-1))
       // fin 2
       .drawLine(this.x(-2), this.y(-5), this.x(-2), this.y(-8))
       .drawLine(this.x(-2), this.y(-8), this.x(0), this.y(-8))
@@ -124,6 +129,8 @@ class Fish extends Movable {
 
   setColors(main, fin, nose) {
     this._main = main;
+    this._mainBright = mul({...main}, 1.2, 255);
+    this._mainDark = mul({...main}, 0.8, 255);
     this._fin = fin;
     this._nose = nose;
   }
@@ -160,6 +167,19 @@ class Kelp {
 
   getEffector() {
     return this.chain[this.chain.length - 1];
+  }
+}
+
+class Bubble {
+  constructor(x, y, layer, size) {
+    this.x = x;
+    this.y = y;
+    this.r = size;
+    this._lerpFactor = 1.0 - layer / FLOOR_LAYERS;
+  }
+  draw(matrix, water) {
+    const color = lerp({r: 0, g: 0, b: 64}, water, this._lerpFactor);
+    matrix.fgColor(color).drawCircle(this.x, this.y, this.r);
   }
 }
 
@@ -240,6 +260,30 @@ function spawnFish(movable, width, height) {
   movable[layer].push(m);
 }
 
+function applyDirectionalAttractors(grid, attractors) {
+  for (let y = 0; y < grid.resolution.y; ++y) {
+    for (let x = 0; x < grid.resolution.x; ++x) {
+      const v = grid.vectors[y * grid.resolution.y + x];
+      v.y = -1;
+      v.x = 0;
+      for (let a of attractors) {
+        if (Math.sign(x - a.x) != Math.sign(a.dx)) {
+          const attractorDirection = {x: a.x - x, y: a.y - y};
+          const distance = vecLength(attractorDirection);
+          if (distance !== 0) {
+            attractorDirection.x /= distance;
+            attractorDirection.y /= distance;
+            const scaledDistance =
+              Math.min(distance, a.maxDistance) / a.maxDistance;
+            v.x += attractorDirection.x * (1.0 - scaledDistance) * a.strength;
+          }
+        }
+      }
+      vecNormalize(v);
+    }
+  }
+}
+
 export default function (width, height) {
   const grid = new FlowGrid(width, height, {
     x: FLOW_GRID_RESOLUTION,
@@ -248,19 +292,10 @@ export default function (width, height) {
   const attractors = [
     {
       x: 0,
-      y: 1,
-      theta: Math.PI,
-      phi: 0.01,
-      strength: ATTRACTOR_STRENGTH,
-      maxDistance: MAX_ATTRACTOR_DISTANCE,
-    },
-    {
-      x: 0,
-      y: 0,
-      theta: 0,
-      phi: 0.015,
-      strength: ATTRACTOR_STRENGTH,
-      maxDistance: MAX_ATTRACTOR_DISTANCE,
+      y: -1,
+      dx: WAVE_SPEED,
+      strength: WAVE_STRENGTH,
+      maxDistance: MAX_WAVE_DEPTH,
     },
   ];
 
@@ -292,21 +327,35 @@ export default function (width, height) {
     spawnFish(movable, width, height);
   }
 
+  const bubbles = [];
+  for (let i = 0; i < FLOOR_LAYERS; ++i) {
+    const bubbleLayer = [];
+    const maxHeight = height - 1 - FLOOR_LAYERS + i;
+    for (let j = 0; j < BUBBLE_DENSITY; ++j) {
+      bubbleLayer.push(
+        new Bubble(
+          Math.random() * (width - 1),
+          Math.random() * maxHeight,
+          i,
+          Math.random() * 2,
+        ),
+      );
+    }
+    bubbles.push(bubbleLayer);
+  }
+
   return {
     name: 'Aquarium',
     run: (matrix, dt, t) => {
-      // cycle the attractors back and forth
       for (let a of attractors) {
-        a.theta += a.phi;
-        if (a.theta > Math.PI * 2) {
-          a.theta = 0;
+        a.x += a.dx;
+        if (a.x > grid.resolution.x + 2 || a.x < -3) {
+          a.dx *= -1;
         }
-        a.x =
-          grid.resolution.x / 2 + Math.sin(a.theta) * (grid.resolution.x / 2);
       }
-      grid.adjust(attractors);
+      applyDirectionalAttractors(grid, attractors);
 
-      // move kelp
+      // move kelp & bubbles
       for (let layer = 0; layer < FLOOR_LAYERS; ++layer) {
         for (let k of kelp[layer]) {
           const startEffector = {...k.getEffector()};
@@ -320,6 +369,23 @@ export default function (width, height) {
             y: startEffector.y + vec.y,
           };
           fabrikSolve(k.chain, endEffector, ITERATIONS);
+        }
+
+        const maxHeight = height - 1 - FLOOR_LAYERS + layer;
+        for (let b of bubbles[layer]) {
+          const vec = grid.getVector(
+            Math.min(width - 1, Math.max(0, b.x)),
+            Math.min(height - 1, Math.max(0, b.y)),
+          );
+          b.x += vec.x;
+          if (b.x > width - 1 || b.x < 0) {
+            b.x = Math.random() * (width - 1);
+          }
+          b.y += vec.y * BUBBLE_RISING_SPEED;
+          if (b.y > maxHeight || b.y < 0) {
+            b.y = maxHeight;
+            b.x = Math.random() * (width - 1);
+          }
         }
       }
 
@@ -371,6 +437,9 @@ export default function (width, height) {
         }
         for (let m of movable[layer]) {
           m.draw(matrix);
+        }
+        for (let b of bubbles[layer]) {
+          b.draw(matrix, WATER_BASE);
         }
       }
 
