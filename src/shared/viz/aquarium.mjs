@@ -129,8 +129,8 @@ class Fish extends Movable {
 
   setColors(main, fin, nose) {
     this._main = main;
-    this._mainBright = mul({...main}, 1.2, 255);
-    this._mainDark = mul({...main}, 0.8, 255);
+    this._mainBright = mul({...main}, 1.3, 255);
+    this._mainDark = mul({...main}, 0.6, 255);
     this._fin = fin;
     this._nose = nose;
   }
@@ -178,7 +178,7 @@ class Bubble {
     this._lerpFactor = 1.0 - layer / FLOOR_LAYERS;
   }
   draw(matrix, water) {
-    const color = lerp({r: 0, g: 0, b: 64}, water, this._lerpFactor);
+    const color = lerp({r: 0, g: 32, b: 128}, water, this._lerpFactor);
     matrix.fgColor(color).drawCircle(this.x, this.y, this.r);
   }
 }
