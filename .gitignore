@@ -3,3 +3,4 @@ ssl
 persist
 dist
 .parcel-cache
+.DS_Store
