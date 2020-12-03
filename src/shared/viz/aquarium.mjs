@@ -82,7 +82,72 @@ class Movable {
   }
 }
 
-class Fish extends Movable {
+class ArawanaFish extends Movable {
+  constructor() {
+    super(-6, -22, 7, 15);
+  }
+
+  draw(matrix) {
+    matrix
+      .fgColor(this._mainBright)
+      .drawLine(this.x(-8), this.y(-5), this.x(15), this.y(-5))
+      .fgColor(this._main)
+      .fill(this.x(-7), this.y(-4), this.x(10), this.y(4))
+      .fill(this.x(11), this.y(-4), this.x(14), this.y(-2))
+      .fill(this.x(11), this.y(-2), this.x(13), this.y(0))
+      .fill(this.x(11), this.y(0), this.x(12), this.y(2))
+      .setPixel(this.x(11), this.y(3))
+      .drawLine(this.x(-17), this.y(0), this.x(-8), this.y(0))
+      .drawLine(this.x(-15), this.y(-1), this.x(-8), this.y(-1))
+      .drawLine(this.x(-13), this.y(-2), this.x(-8), this.y(-2))
+      .drawLine(this.x(-11), this.y(-3), this.x(-8), this.y(-3))
+      .drawLine(this.x(-9), this.y(-4), this.x(-8), this.y(-4))
+      .drawLine(this.x(-15), this.y(1), this.x(-8), this.y(1))
+      .drawLine(this.x(-13), this.y(2), this.x(-8), this.y(2))
+      .drawLine(this.x(-11), this.y(3), this.x(-8), this.y(3))
+      .drawLine(this.x(-9), this.y(4), this.x(-8), this.y(4))
+      .fgColor(this._mainDark)
+      .drawLine(this.x(15), this.y(-4), this.x(15), this.y(-2))
+      .drawLine(this.x(15), this.y(-2), this.x(14), this.y(-2))
+      .drawLine(this.x(14), this.y(-2), this.x(14), this.y(0))
+      .drawLine(this.x(14), this.y(0), this.x(13), this.y(0))
+      .drawLine(this.x(13), this.y(0), this.x(13), this.y(2))
+      .drawLine(this.x(13), this.y(2), this.x(12), this.y(3))
+      .drawLine(this.x(12), this.y(3), this.x(11), this.y(4))
+      .drawLine(this.x(11), this.y(4), this.x(10), this.y(5))
+      .drawLine(this.x(10), this.y(5), this.x(-7), this.y(5))
+      // fin
+      .fgColor(this._fin)
+      .drawLine(this.x(-16), this.y(-6), this.x(-4), this.y(-6))
+      .drawLine(this.x(-14), this.y(-5), this.x(-7), this.y(-5))
+      .drawLine(this.x(-16), this.y(6), this.x(-4), this.y(6))
+      .drawLine(this.x(-14), this.y(5), this.x(-2), this.y(5))
+
+      .drawLine(this.x(-22), this.y(0), this.x(-18), this.y(0))
+      .drawLine(this.x(-20), this.y(-1), this.x(-16), this.y(-1))
+      .drawLine(this.x(-18), this.y(-2), this.x(-14), this.y(-2))
+      .drawLine(this.x(-16), this.y(-3), this.x(-12), this.y(-3))
+      .drawLine(this.x(-14), this.y(-4), this.x(-10), this.y(-4))
+      .drawLine(this.x(-20), this.y(1), this.x(-16), this.y(1))
+      .drawLine(this.x(-18), this.y(2), this.x(-14), this.y(2))
+      .drawLine(this.x(-16), this.y(3), this.x(-12), this.y(3))
+      .drawLine(this.x(-14), this.y(4), this.x(-10), this.y(4))
+
+      .drawLine(this.x(8), this.y(3), this.x(3), this.y(7))
+      // eye
+      .fgColor({r: 0, g: 0, b: 0})
+      .drawLine(this.x(10), this.y(-3), this.x(12), this.y(-3));
+  }
+
+  setColors(main, fin) {
+    this._main = main;
+    this._mainBright = mul({...main}, 1.2, 255);
+    this._mainDark = mul({...main}, 0.8, 255);
+    this._fin = mul({...main}, 0.6, 255);
+  }
+}
+
+class SunFish extends Movable {
   constructor() {
     super(-7, -9, 7, 8);
   }
@@ -214,49 +279,73 @@ function fabrikSolve(chain, goal, iterations) {
 }
 
 function spawnFish(movable, width, height) {
-  const m = new Fish();
-  m.factory = spawnFish;
-
   const layer = Math.round(Math.random() * (FLOOR_LAYERS - 1));
+  const lerpFactor = Math.min(layer / FLOOR_LAYERS + 0.5, 1.0);
+
+  const spawn = Math.random();
+  let m = 0;
+  if (spawn > 0) {
+    m = new ArawanaFish();
+    m.setColors(
+      lerp(
+        WATER_BASE,
+        {
+          r: Math.round(Math.random() * 255),
+          g: Math.round(Math.random() * 255),
+          b: Math.round(Math.random() * 255),
+        },
+        lerpFactor,
+      ),
+      lerp(
+        WATER_BASE,
+        {
+          r: Math.round(Math.random() * 64),
+          g: Math.round(Math.random() * 64),
+          b: Math.round(Math.random() * 64),
+        },
+        lerpFactor,
+      ),
+    );
+  } else {
+    m = new SunFish();
+    m.setColors(
+      lerp(
+        WATER_BASE,
+        {
+          r: Math.round(Math.random() * 255),
+          g: Math.round(Math.random() * 255),
+          b: Math.round(Math.random() * 255),
+        },
+        lerpFactor,
+      ),
+      lerp(
+        WATER_BASE,
+        {
+          r: Math.round(Math.random() * 64),
+          g: Math.round(Math.random() * 64),
+          b: Math.round(Math.random() * 64),
+        },
+        lerpFactor,
+      ),
+      lerp(
+        WATER_BASE,
+        {
+          r: Math.round(Math.random() * 255),
+          g: Math.round(Math.random() * 255),
+          b: Math.round(Math.random() * 255),
+        },
+        lerpFactor,
+      ),
+    );
+  }
+
   const orientation = Math.sign(Math.random() - 0.5);
   const y =
     Math.random() * (height - m.height - FLOOR_LAYERS + layer) - m.yOffset;
-  const xOffset = (Math.random() + 0.5) * Math.abs(m.xOffset);
-  const lerpFactor = Math.min(layer / FLOOR_LAYERS + 0.5, 1.0);
-
+  const xOffset = m.width + m.xOffset;
   m.setVelocity(FISH_VELOCITY * (Math.random() + 0.5), 0.0);
   m.setOrientation(orientation, 1);
-
   m.setPosition(orientation > 0 ? -xOffset : width + xOffset, y);
-  m.setColors(
-    lerp(
-      WATER_BASE,
-      {
-        r: Math.round(Math.random() * 255),
-        g: Math.round(Math.random() * 255),
-        b: Math.round(Math.random() * 255),
-      },
-      lerpFactor,
-    ),
-    lerp(
-      WATER_BASE,
-      {
-        r: Math.round(Math.random() * 64),
-        g: Math.round(Math.random() * 64),
-        b: Math.round(Math.random() * 64),
-      },
-      lerpFactor,
-    ),
-    lerp(
-      WATER_BASE,
-      {
-        r: Math.round(Math.random() * 255),
-        g: Math.round(Math.random() * 255),
-        b: Math.round(Math.random() * 255),
-      },
-      lerpFactor,
-    ),
-  );
   movable[layer].push(m);
 }
 
@@ -390,7 +479,7 @@ export default function (width, height) {
       }
 
       // move objects around
-      let respawn = [];
+      let respawn = 0;
       for (let layer = 0; layer < FLOOR_LAYERS; ++layer) {
         for (let i = movable[layer].length - 1; i >= 0; --i) {
           const m = movable[layer][i];
@@ -398,12 +487,12 @@ export default function (width, height) {
           const rect = m.getBoundingRect();
           if (rect.right < 0 || rect.left > width - 1) {
             movable[layer].splice(i, 1);
-            respawn.push(m.factory);
+            respawn++;
           }
         }
       }
-      for (let f of respawn) {
-        f(movable, width, height);
+      while (respawn-- > 0) {
+        spawnFish(movable, width, height);
       }
 
       matrix.clear();
