@@ -81,6 +81,7 @@ export default function (width, height) {
 
   return {
     name: 'Fire',
+    audio: 'audio/fire.mp3',
     run: (matrix, dt, t) => {
       matrix.clear();
 

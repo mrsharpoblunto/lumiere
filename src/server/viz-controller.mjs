@@ -6,6 +6,7 @@ import * as M from 'rpi-led-matrix';
 import * as config from './config.mjs';
 import visualizations from '../shared/viz/index.mjs';
 import {MATRIX_WIDTH, MATRIX_HEIGHT} from '../shared/config.mjs';
+import {AudioPlayer} from './audio-player.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,9 +25,11 @@ export class VizController extends EventEmitter {
       },
       {
         ...M.LedMatrix.defaultRuntimeOptions(),
+        dropPrivileges: 0,
         gpioSlowdown: 3,
       },
     );
+    this.audioPlayer = new AudioPlayer();
 
     this.state = state;
     this.activeTimeout = 0;
@@ -84,10 +87,12 @@ export class VizController extends EventEmitter {
         .afterSync(() =>{})
         .clear()
         .sync();
+      this.audioPlayer.stop();
     } else {
       this.matrix.afterSync(this._afterSync.bind(this));
       const viz = this.visualizations[this.state.visualization];
       viz.run(this.matrix, 0, 0);
+      this.audioPlayer.play(viz.audio);
       this.matrix.sync();
     }
   }

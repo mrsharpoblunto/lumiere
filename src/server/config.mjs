@@ -30,4 +30,6 @@ export const SERIAL = '0001';
 export const VIZ_KEY = 'viz_state';
 export const WEB_USER = 'web user';
 export const HOMEKIT_USER = 'HomeKit user';
+export const AUDIO_COMMAND = 'omxplayer';
+export const AUDIO_ARGS = ['-o', 'alsa:hw:1,0', '--loop'];
 // TODO matrix properties should go here too...

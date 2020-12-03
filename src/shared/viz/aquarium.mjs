@@ -92,11 +92,13 @@ class ArawanaFish extends Movable {
       .fgColor(this._mainBright)
       .drawLine(this.x(-8), this.y(-5), this.x(15), this.y(-5))
       .fgColor(this._main)
-      .fill(this.x(-7), this.y(-4), this.x(10), this.y(4))
-      .fill(this.x(11), this.y(-4), this.x(14), this.y(-2))
-      .fill(this.x(11), this.y(-2), this.x(13), this.y(0))
-      .fill(this.x(11), this.y(0), this.x(12), this.y(2))
-      .setPixel(this.x(11), this.y(3))
+      .fill(this.x(-7), this.y(-4), this.x(9), this.y(4))
+      .fill(this.x(10), this.y(-4), this.x(14), this.y(-2))
+      .fill(this.x(10), this.y(-2), this.x(13), this.y(0))
+      .fill(this.x(10), this.y(0), this.x(12), this.y(2))
+      .fill(this.x(10), this.y(0), this.x(12), this.y(2))
+      .drawLine(this.x(10), this.y(3), this.x(11), this.y(3))
+      .setPixel(this.x(10), this.y(4))
       .drawLine(this.x(-17), this.y(0), this.x(-8), this.y(0))
       .drawLine(this.x(-15), this.y(-1), this.x(-8), this.y(-1))
       .drawLine(this.x(-13), this.y(-2), this.x(-8), this.y(-2))
@@ -114,8 +116,8 @@ class ArawanaFish extends Movable {
       .drawLine(this.x(13), this.y(0), this.x(13), this.y(2))
       .drawLine(this.x(13), this.y(2), this.x(12), this.y(3))
       .drawLine(this.x(12), this.y(3), this.x(11), this.y(4))
-      .drawLine(this.x(11), this.y(4), this.x(10), this.y(5))
-      .drawLine(this.x(10), this.y(5), this.x(-7), this.y(5))
+      .drawLine(this.x(11), this.y(4), this.x(9), this.y(5))
+      .drawLine(this.x(9), this.y(5), this.x(-7), this.y(5))
       // fin
       .fgColor(this._fin)
       .drawLine(this.x(-16), this.y(-6), this.x(-4), this.y(-6))
@@ -134,9 +136,10 @@ class ArawanaFish extends Movable {
       .drawLine(this.x(-14), this.y(4), this.x(-10), this.y(4))
 
       .drawLine(this.x(8), this.y(3), this.x(3), this.y(7))
+      .drawLine(this.x(7), this.y(3), this.x(2), this.y(7))
       // eye
       .fgColor({r: 0, g: 0, b: 0})
-      .drawLine(this.x(10), this.y(-3), this.x(12), this.y(-3));
+      .drawLine(this.x(11), this.y(-3), this.x(12), this.y(-3));
   }
 
   setColors(main, fin) {
@@ -283,8 +286,8 @@ function spawnFish(movable, width, height) {
   const lerpFactor = Math.min(layer / FLOOR_LAYERS + 0.5, 1.0);
 
   const spawn = Math.random();
-  let m = 0;
-  if (spawn > 0) {
+  let m = null;
+  if (spawn < 0.2) {
     m = new ArawanaFish();
     m.setColors(
       lerp(
@@ -435,6 +438,7 @@ export default function (width, height) {
 
   return {
     name: 'Aquarium',
+    audio: 'audio/aquarium.mp3',
     run: (matrix, dt, t) => {
       for (let a of attractors) {
         a.x += a.dx;
