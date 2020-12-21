@@ -29,6 +29,16 @@ export class VizController extends EventEmitter {
         gpioSlowdown: 3,
       },
     );
+
+    // Hack: monkeypatch a safe fill function to prevent buffer underflow/overflow
+    // when drawing negative y values
+    this.matrix.fillSafe = function (x0, y0, x1, y1) {
+      if (y1 >= 0) {
+        this.fill(x0, Math.max(0,y0), x1, y1);
+      }
+      return this;
+    };
+
     this.audioPlayer = new AudioPlayer();
 
     this.state = state;
@@ -69,10 +79,18 @@ export class VizController extends EventEmitter {
 
   _afterSync(matrix, dt, t) {
     const viz = this.visualizations[this.state.visualization];
-    viz.run(this.matrix, dt, t);
+    try {
+      viz.run(this.matrix, dt, t);
+    } catch (ex) {
+      console.error(ex.stack);
+    }
     this.activeTimeout = setTimeout(() => {
       if (this.state.on) { 
-        this.matrix.sync(); 
+        try {
+          this.matrix.sync(); 
+        } catch (ex) {
+          console.error(ex.stack);
+        }
       }
     }, 16 - dt);
   }

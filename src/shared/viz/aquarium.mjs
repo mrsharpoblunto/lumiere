@@ -162,33 +162,34 @@ class PufferFish extends Movable {
       this._vy = -6;
       this._vx *= 0.5;
     }
+
     matrix
       .fgColor(this._main)
-      .fill(this.x(-4), this.y(-3), this.x(4), this.y(2))
-      .fill(this.x(5), this.y(-2), this.x(5), this.y(0))
-      .fill(this.x(-5), this.y(-2), this.x(-5), this.y(1))
-      .fill(this.x(-8), this.y(-4), this.x(-6), this.y(-2))
-      .fill(this.x(-8), this.y(2), this.x(-6), this.y(0))
+      .fillSafe(this.x(-4), this.y(-3), this.x(4), this.y(2))
+      .drawLine(this.x(5), this.y(-2), this.x(5), this.y(0))
+      .drawLine(this.x(-5), this.y(-2), this.x(-5), this.y(1))
+      .fillSafe(this.x(-8), this.y(-4), this.x(-6), this.y(-2))
+      .fillSafe(this.x(-8), this.y(0), this.x(-6), this.y(2))
       .fgColor(this._mainBright)
-      .fill(this.x(-4), this.y(-3), this.x(4), this.y(-3))
+      .drawLine(this.x(-4), this.y(-3), this.x(4), this.y(-3))
       .fgColor(this._mainDark)
-      .fill(this.x(-4), this.y(2), this.x(4), this.y(2))
-      .fill(this.x(4), this.y(1), this.x(4), this.y(2))
+      .drawLine(this.x(-4), this.y(2), this.x(4), this.y(2))
+      .drawLine(this.x(4), this.y(1), this.x(4), this.y(2))
       // eye
       .fgColor({r: 255, g: 255, b: 255})
-      .fill(this.x(1), this.y(-2), this.x(3), this.y(0))
+      .fillSafe(this.x(1), this.y(-2), this.x(3), this.y(0))
       .fgColor({r: 0, g: 0, b: 0})
       .setPixel(this.x(2), this.y(-1));
 
     if (this._puffed) {
       matrix
         .fgColor(this._mainDark)
-        .fill(this.x(-2), this.y(3), this.x(4), this.y(6))
-        .fill(this.x(5), this.y(1), this.x(5), this.y(4))
-        .fill(this.x(-4), this.y(3), this.x(-4), this.y(4))
-        .fill(this.x(-3), this.y(3), this.x(-3), this.y(5))
+        .fillSafe(this.x(-2), this.y(3), this.x(4), this.y(6))
+        .drawLine(this.x(5), this.y(1), this.x(5), this.y(4))
+        .drawLine(this.x(-4), this.y(3), this.x(-4), this.y(4))
+        .drawLine(this.x(-3), this.y(3), this.x(-3), this.y(5))
         .fgColor(this._mainBright)
-        .fill(this.x(-2), this.y(-4), this.x(2), this.y(-4))
+        .drawLine(this.x(-2), this.y(-4), this.x(2), this.y(-4))
         .setPixel(this.x(-2), this.y(-5))
         .setPixel(this.x(1), this.y(-5))
         .setPixel(this.x(4), this.y(-4))
@@ -206,11 +207,10 @@ class PufferFish extends Movable {
     }
   }
 
-  setColors(main, belly) {
+  setColors(main) {
     this._main = main;
     this._mainBright = mul({...main}, 1.3, 255);
     this._mainDark = mul({...main}, 0.6, 255);
-    this._belly = belly;
   }
 }
 
@@ -361,15 +361,6 @@ function spawnFish(movable, width, height) {
           r: Math.round(Math.random() * 255),
           g: Math.round(Math.random() * 255),
           b: Math.round(Math.random() * 255),
-        },
-        lerpFactor,
-      ),
-      lerp(
-        WATER_BASE,
-        {
-          r: Math.round(Math.random() * 64),
-          g: Math.round(Math.random() * 64),
-          b: Math.round(Math.random() * 64),
         },
         lerpFactor,
       ),
@@ -576,7 +567,12 @@ export default function (width, height) {
           const m = movable[layer][i];
           m.movePosition(dt);
           const rect = m.getBoundingRect();
-          if (rect.right < 0 || rect.left > width - 1) {
+          if (
+            rect.right < 0 ||
+            rect.left > width - 1 ||
+            rect.bottom < 0 ||
+            rect.top > height - 1
+          ) {
             movable[layer].splice(i, 1);
             respawn++;
           }
