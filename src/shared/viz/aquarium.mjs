@@ -150,6 +150,70 @@ class ArawanaFish extends Movable {
   }
 }
 
+class PufferFish extends Movable {
+  constructor() {
+    super(-6, -8, 5, 5);
+    this._puffed = false;
+  }
+
+  draw(matrix) {
+    if (!this._puffed && Math.random() < 0.002) {
+      this._puffed = !this._puffed;
+      this._vy = -6;
+      this._vx *= 0.5;
+    }
+    matrix
+      .fgColor(this._main)
+      .fill(this.x(-4), this.y(-3), this.x(4), this.y(2))
+      .fill(this.x(5), this.y(-2), this.x(5), this.y(0))
+      .fill(this.x(-5), this.y(-2), this.x(-5), this.y(1))
+      .fill(this.x(-8), this.y(-4), this.x(-6), this.y(-2))
+      .fill(this.x(-8), this.y(2), this.x(-6), this.y(0))
+      .fgColor(this._mainBright)
+      .fill(this.x(-4), this.y(-3), this.x(4), this.y(-3))
+      .fgColor(this._mainDark)
+      .fill(this.x(-4), this.y(2), this.x(4), this.y(2))
+      .fill(this.x(4), this.y(1), this.x(4), this.y(2))
+      // eye
+      .fgColor({r: 255, g: 255, b: 255})
+      .fill(this.x(1), this.y(-2), this.x(3), this.y(0))
+      .fgColor({r: 0, g: 0, b: 0})
+      .setPixel(this.x(2), this.y(-1));
+
+    if (this._puffed) {
+      matrix
+        .fgColor(this._mainDark)
+        .fill(this.x(-2), this.y(3), this.x(4), this.y(6))
+        .fill(this.x(5), this.y(1), this.x(5), this.y(4))
+        .fill(this.x(-4), this.y(3), this.x(-4), this.y(4))
+        .fill(this.x(-3), this.y(3), this.x(-3), this.y(5))
+        .fgColor(this._mainBright)
+        .fill(this.x(-2), this.y(-4), this.x(2), this.y(-4))
+        .setPixel(this.x(-2), this.y(-5))
+        .setPixel(this.x(1), this.y(-5))
+        .setPixel(this.x(4), this.y(-4))
+        .setPixel(this.x(-4), this.y(5))
+        .setPixel(this.x(-1), this.y(6))
+        .setPixel(this.x(2), this.y(6))
+        .setPixel(this.x(5), this.y(3))
+        .setPixel(this.x(6), this.y(-1))
+        // eye
+        .fgColor({r: 255, g: 255, b: 255})
+        .setPixel(this.x(0), this.y(-1))
+        .setPixel(this.x(4), this.y(-1))
+        .setPixel(this.x(2), this.y(-3))
+        .setPixel(this.x(2), this.y(1));
+    }
+  }
+
+  setColors(main, belly) {
+    this._main = main;
+    this._mainBright = mul({...main}, 1.3, 255);
+    this._mainDark = mul({...main}, 0.6, 255);
+    this._belly = belly;
+  }
+}
+
 class SunFish extends Movable {
   constructor() {
     super(-7, -9, 7, 8);
@@ -287,7 +351,30 @@ function spawnFish(movable, width, height) {
 
   const spawn = Math.random();
   let m = null;
+
   if (spawn < 0.2) {
+    m = new PufferFish();
+    m.setColors(
+      lerp(
+        WATER_BASE,
+        {
+          r: Math.round(Math.random() * 255),
+          g: Math.round(Math.random() * 255),
+          b: Math.round(Math.random() * 255),
+        },
+        lerpFactor,
+      ),
+      lerp(
+        WATER_BASE,
+        {
+          r: Math.round(Math.random() * 64),
+          g: Math.round(Math.random() * 64),
+          b: Math.round(Math.random() * 64),
+        },
+        lerpFactor,
+      ),
+    );
+  } else if (spawn < 0.4) {
     m = new ArawanaFish();
     m.setColors(
       lerp(
