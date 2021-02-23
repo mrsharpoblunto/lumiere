@@ -1,6 +1,16 @@
 /**
  * @format
  */
+export function patchMatrix(matrix) {
+  matrix.fillSafe = function (x0, y0, x1, y1) {
+    if (y1 >= 0) {
+      this.fill(x0, Math.max(0, y0), x1, y1);
+    }
+    return this;
+  };
+  return matrix;
+}
+
 export function lerp(v0, v1, t) {
   if (typeof v0 === 'number') {
     return v0 * (1 - t) + v1 * t;

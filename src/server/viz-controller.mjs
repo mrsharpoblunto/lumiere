@@ -7,6 +7,7 @@ import * as config from './config.mjs';
 import visualizations from '../shared/viz/index.mjs';
 import {MATRIX_WIDTH, MATRIX_HEIGHT} from '../shared/config.mjs';
 import {AudioPlayer} from './audio-player.mjs';
+import {patchMatrix} from '../shared/viz/helpers.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,7 +16,7 @@ export class VizController extends EventEmitter {
   constructor(state) {
     super();
 
-    this.matrix = new M.LedMatrix(
+    this.matrix = patchMatrix(new M.LedMatrix(
       {
         ...M.LedMatrix.defaultMatrixOptions(),
         rows: MATRIX_HEIGHT,
@@ -28,16 +29,7 @@ export class VizController extends EventEmitter {
         dropPrivileges: 0,
         gpioSlowdown: 3,
       },
-    );
-
-    // Hack: monkeypatch a safe fill function to prevent buffer underflow/overflow
-    // when drawing negative y values
-    this.matrix.fillSafe = function (x0, y0, x1, y1) {
-      if (y1 >= 0) {
-        this.fill(x0, Math.max(0,y0), x1, y1);
-      }
-      return this;
-    };
+    ));
 
     this.audioPlayer = new AudioPlayer();
 

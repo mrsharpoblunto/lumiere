@@ -6,6 +6,7 @@ import ReactDOM from 'react-dom';
 import visualizations from '../shared/viz/index.mjs';
 import {CanvasMatrix} from './canvas-matrix';
 import {MATRIX_WIDTH, MATRIX_HEIGHT} from '../shared/config.mjs';
+import {patchMatrix} from '../shared/viz/helpers.mjs';
 
 import {
   makeStyles,
@@ -136,10 +137,8 @@ function VisualizationItem({viz, onClick, selected}) {
 function Visualization(props) {
   const canvasEl = React.useRef(null);
   React.useEffect(() => {
-    const matrix = new CanvasMatrix(
-      MATRIX_WIDTH,
-      MATRIX_HEIGHT,
-      canvasEl.current,
+    const matrix = patchMatrix(
+      new CanvasMatrix(MATRIX_WIDTH, MATRIX_HEIGHT, canvasEl.current),
     );
     let cleanup = false;
     let pending = null;
