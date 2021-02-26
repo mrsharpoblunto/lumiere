@@ -30,6 +30,12 @@ export const SERIAL = '0001';
 export const VIZ_KEY = 'viz_state';
 export const WEB_USER = 'web user';
 export const HOMEKIT_USER = 'HomeKit user';
+
 export const AUDIO_COMMAND = 'omxplayer';
 export const AUDIO_ARGS = ['-o', 'alsa:hw:1,0', '--loop'];
+
+export const HUE_BRIDGE_IP = '192.168.0.4';
+export const HUE_USER = 'O7nK3Cv1WUSGeOtiuzWbPCsxbjxCdIwmRFWPo72Z';
+export const HUE_LIGHT_GROUP = 13;
+
 // TODO matrix properties should go here too...

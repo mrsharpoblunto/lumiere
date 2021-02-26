@@ -517,6 +517,11 @@ export default function (width, height) {
   return {
     name: 'Aquarium',
     audio: 'audio/aquarium.mp3',
+    light: {
+      bri: 254,
+      hue: 40730,
+      sat: 247,
+    },
     run: (matrix, dt, t) => {
       for (let a of attractors) {
         a.x += a.dx;

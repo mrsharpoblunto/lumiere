@@ -82,6 +82,11 @@ export default function (width, height) {
   return {
     name: 'Fire',
     audio: 'audio/fire.mp3',
+    light: {
+      bri: 254,
+      hue: 65440,
+      sat: 202,
+    },
     run: (matrix, dt, t) => {
       matrix.clear();
 
