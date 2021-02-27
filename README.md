@@ -1,6 +1,8 @@
 # Lumiere
 Control an LED matrix for an animated display on a Raspberry Pi. Also optionally provides accompanying audio & control over Philips Hue lights
 
+![Freplace installation](/fireplace.gif)
+
 ## Installing
 
 Run ```./scripts/setup.sh```
