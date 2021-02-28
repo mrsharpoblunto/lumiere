@@ -75,10 +75,6 @@ app.storage = storage;
     forgiveParseErrors: true,
   });
 
-  configureApiRoutes(app);
-  configureRoutes(app);
-  await startServer(app);
-
   let vizState = await storage.getItem(config.VIZ_KEY);
   if (vizState) {
     vizState = JSON.parse(vizState);
@@ -89,6 +85,10 @@ app.storage = storage;
   app.logger.info("Loaded visualizations: [" + 
     app.vizController.visualizations.map((v) => v.name).join(', ') +
   "]");
+
+  configureApiRoutes(app);
+  configureRoutes(app);
+  await startServer(app);
 
   await startHomekitServer(app);
 })();
