@@ -5,7 +5,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "rimraf dist/ && parcel build src/client/index.html --no-scope-hoist --no-source-maps",
-    "server": "node src/server/index.js",
+    "server": "node src/server/index.mjs",
     "dev:server": "nodemon --watch src/server --inspect src/server/index.mjs",
     "dev:client": "parcel serve src/client/index.html --port 3001",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\""

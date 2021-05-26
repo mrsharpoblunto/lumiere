@@ -53,6 +53,12 @@ export function configureApiRoutes(app) {
     }
   });
 
+  app.post('/api/1/report-error', (req, res) => {
+    app.logger.error(
+      `Client error: ${req.body.source}:${req.body.lineno}:${req.body.colno} - ${req.body.message}\n${req.body.stack}`,
+    );
+  });
+
   app.post('/api/1/toggle-on', async (req, res) => {
     try {
       const {on} = app.vizController.toggleOn(config.WEB_USER);

@@ -57,6 +57,7 @@ function useRemoteState() {
     on: false,
     visualization: -1,
   });
+  const [polling, setPolling] = React.useState(false);
 
   const pollState = state => {
     const startTime = new Date();
@@ -65,6 +66,13 @@ function useRemoteState() {
       () => controller.abort(),
       LONGPOLL_TIMEOUT + 5000,
     );
+    const visibilityChange = () => {
+      if (document.hidden) {
+        controller.abort();
+      }
+    };
+    window.addEventListener('visibilitychange', visibilityChange);
+
     const pollNext = state =>
       setTimeout(
         () => pollState(state),
@@ -86,12 +94,15 @@ function useRemoteState() {
         }
         pollNext(res.state || state);
       })
+      .catch(err => {
+        setPolling(false);
+      })
       .finally(() => {
         clearTimeout(abortTimeout);
+        window.removeEventListener('visibilitychange', visibilityChange);
       });
   };
 
-  const [polling, setPolling] = React.useState(false);
   if (!polling) {
     pollState(remoteState);
     setPolling(true);
@@ -138,19 +149,26 @@ function Visualization(props) {
     const matrix = patchMatrix(
       new CanvasMatrix(MATRIX_WIDTH, MATRIX_HEIGHT, canvasEl.current),
     );
+
     let cleanup = false;
     let pending = null;
+
     matrix.afterSync((m, dt, t) => {
       if (!cleanup) {
         props.viz.run(m, dt, t);
-        pending = window.requestAnimationFrame(() => m.sync());
+        pending = window.requestAnimationFrame(() => {
+          pending = null;
+          m.sync();
+        });
       }
     });
     matrix.sync();
+
     return () => {
       cleanup = true;
       if (pending) {
         window.clearAnimationFrame(pending);
+        pending = null;
       }
     };
   }, [props.viz, canvasEl]);
@@ -230,4 +248,14 @@ function App() {
   );
 }
 
+window.onerror = function (message, source, lineno, colno, error) {
+  fetch(`/api/1/report-error`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({message, source, lineno, colno, stack: error.stack}),
+  });
+  return false;
+};
+
+ReactDOM.render(<App />, document.getElementById('app-container'));
 ReactDOM.render(<App />, document.getElementById('app-container'));
