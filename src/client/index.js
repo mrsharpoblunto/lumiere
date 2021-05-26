@@ -15,11 +15,9 @@ import {
 } from '@material-ui/core/styles';
 import {
   Switch,
-  Divider,
   List,
   ListItem,
   ListItemText,
-  CircularProgress,
   CssBaseline,
   Toolbar,
   AppBar,
