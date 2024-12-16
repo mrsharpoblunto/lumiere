@@ -154,8 +154,8 @@ async function startServer(app) {
 
 function sslConfig() {
   return {
-    cert: tryReadFileSync(path.join(__dirname, '../../ssl', 'server.crt')),
-    key: tryReadFileSync(path.join(__dirname, '../../ssl', 'server.key')),
+    cert: tryReadFileSync(config.SSL_CERT),
+    key: tryReadFileSync(config.SSL_KEY),
   };
 }
 

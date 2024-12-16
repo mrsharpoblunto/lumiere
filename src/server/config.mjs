@@ -1,6 +1,12 @@
 /**
  * @format
  */
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 export const LOG_LEVEL =
   process.env.NODE_ENV === 'production' ? 'info' : 'verbose';
 export const APP_HTTPS = process.env.NODE_ENV === 'production';
@@ -34,8 +40,9 @@ export const HOMEKIT_USER = 'HomeKit user';
 export const AUDIO_COMMAND = 'omxplayer';
 export const AUDIO_ARGS = ['-o', 'alsa:hw:1,0', '--loop'];
 
-export const HUE_BRIDGE_IP = '192.168.0.4';
-export const HUE_USER = 'O7nK3Cv1WUSGeOtiuzWbPCsxbjxCdIwmRFWPo72Z';
-export const HUE_LIGHT_GROUP = 13;
+export const SSL_KEY =
+  path.join(__dirname,'../../ssl/server.key');
+export const SSL_CERT =
+  path.join(__dirname,'../../ssl/server.crt');
 
 // TODO matrix properties should go here too...

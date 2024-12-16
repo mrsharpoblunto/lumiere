@@ -7,7 +7,6 @@ import * as config from './config.mjs';
 import visualizations from '../shared/viz/index.mjs';
 import {MATRIX_WIDTH, MATRIX_HEIGHT} from '../shared/config.mjs';
 import {AudioPlayer} from './audio-player.mjs';
-import {HueAPI} from './hue.mjs';
 import {patchMatrix} from '../shared/viz/helpers.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -33,7 +32,6 @@ export class VizController extends EventEmitter {
     ));
 
     this.audioPlayer = new AudioPlayer();
-    this.lights = new HueAPI(config.HUE_BRIDGE_IP, config.HUE_USER);
 
     this.state = state;
     this.activeTimeout = 0;
@@ -100,25 +98,11 @@ export class VizController extends EventEmitter {
         .clear()
         .sync();
       this.audioPlayer.stop();
-      this.lights.putGroup(config.HUE_LIGHT_GROUP, { on: false })
-        .then(r => {
-          if (r.body && r.body.length && r.body[0].error) {
-            console.error(`Hue API error: ${r.body[0].error.description}`);
-          }
-        })
-        .catch(err => console.error(err.stack));
     } else {
       this.matrix.afterSync(this._afterSync.bind(this));
       const viz = this.visualizations[this.state.visualization];
       viz.run(this.matrix, 0, 0);
       this.audioPlayer.play(viz.audio);
-      this.lights.putGroup(config.HUE_LIGHT_GROUP, { on: true, ...viz.light })
-        .then(r => {
-          if (r.body && r.body.length && r.body[0].error) {
-            console.error(`Hue API error: ${r.body[0].error.description}`);
-          }
-        })
-        .catch(err => console.error(err.stack));
       this.matrix.sync();
     }
   }
