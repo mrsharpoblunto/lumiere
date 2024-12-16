@@ -173,9 +173,10 @@ function Visualization(props) {
     };
   }, [props.viz, canvasEl]);
 
+  const {viz, ...rest} = props;
   return (
     <canvas
-      {...props}
+      {...rest}
       ref={canvasEl}
       width={MATRIX_WIDTH}
       height={MATRIX_HEIGHT}
