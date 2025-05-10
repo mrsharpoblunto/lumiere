@@ -112,9 +112,28 @@ function useRemoteState() {
 }
 
 function useVisualizations() {
-  const [viz] = React.useState(visualizations(MATRIX_WIDTH, MATRIX_HEIGHT));
+  const [viz] = React.useState(() => visualizations(MATRIX_WIDTH, MATRIX_HEIGHT));
   return viz;
 }
+
+function useHash() {
+  const [hash, setHash] = React.useState(() => 
+    window.location.hash.replace('#', '')
+  );
+
+  React.useEffect(() => {
+    const handleHashChange = () => {
+      setHash(window.location.hash.replace('#', ''));
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, []);
+
+  return hash;
+};
 
 function toggleOn(remoteState, setRemoteState) {
   setRemoteState({...remoteState, on: !remoteState.on});
@@ -167,17 +186,22 @@ function Visualization(props) {
     return () => {
       cleanup = true;
       if (pending) {
-        window.clearAnimationFrame(pending);
+        window.cancelAnimationFrame(pending);
         pending = null;
       }
     };
   }, [props.viz, canvasEl]);
+
+  const setHash = () => {
+    window.location.hash = props.viz.name;
+  };
 
   const {viz, ...rest} = props;
   return (
     <canvas
       {...rest}
       ref={canvasEl}
+      onClick={process.env.NODE_ENV !== 'production' ? setHash : undefined}
       width={MATRIX_WIDTH}
       height={MATRIX_HEIGHT}
     />
@@ -203,14 +227,17 @@ function App() {
     [prefersDarkMode],
   );
 
-  if (window.location.hash) {
-    const index = parseInt(window.location.hash.substr(1), 10);
-    return (
-      <Visualization
-        viz={visualizations[index]}
-        style={{width: '100%', height: '100%'}}
-      />
-    );
+  const hash = useHash();
+  if (hash) {
+    const viz = visualizations.find(v => v.name === hash);
+    if (viz) {
+      return (
+        <Visualization
+          viz={viz}
+          style={{width: '100%', height: '100%', maxWidth: 'calc(100vh * 2)', maxHeight: 'calc(100vw / 2)', AspectRatio: '2/1'}}
+        />
+      );
+    }
   }
 
   return (
@@ -258,5 +285,4 @@ window.onerror = function (message, source, lineno, colno, error) {
   return false;
 };
 
-ReactDOM.render(<App />, document.getElementById('app-container'));
 ReactDOM.render(<App />, document.getElementById('app-container'));

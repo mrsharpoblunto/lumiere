@@ -5,7 +5,7 @@ if [ "$(whoami)" != "root" ]; then
 fi
 
 # install dependencies
-apt-get install openssl libavahi-compat-libdnssd-dev nodejs npm libasound2-dev omxplayer
+apt-get install openssl libavahi-compat-libdnssd-dev nodejs npm omxplayer
 
 # build the app & web client
 npm install

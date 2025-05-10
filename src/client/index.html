@@ -17,10 +17,19 @@ canvas {
   image-rendering: -webkit-crisp-edges; /* Webkit (Safari) */
   image-rendering: pixelated;           /* Chrome */
 }
+body {
+  margin: 0;
+  padding: 0;
+}
+#app-container {
+  width: 100vw;
+  height: 100vh;
+}
+
 </style>
 </head>
 <body>
   <div id="app-container"></div>
-  <script src="index.js"></script>
+  <script type="module" src="index.jsx"></script>
 </body>
 </html>

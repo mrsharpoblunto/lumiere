@@ -4,10 +4,10 @@
   "description": "Control an LED matrix for an animated display",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "rimraf dist/ && parcel build src/client/index.html --no-scope-hoist --no-source-maps",
+    "build": "rimraf dist/ && vite build",
     "server": "node src/server/index.mjs",
     "dev:server": "nodemon --watch src/server --inspect src/server/index.mjs",
-    "dev:client": "parcel serve src/client/index.html --port 3001",
+    "dev:client": "vite --port 3001",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\""
   },
   "repository": {
@@ -34,22 +34,17 @@
     "node-persist": "^3.1.0",
     "node-uuid": "^1.4.8",
     "rpi-led-matrix": "^1.11.1",
-    "speaker": "^0.5.2",
     "tree-kill": "^1.2.2",
     "winston": "^3.3.3"
   },
   "devDependencies": {
-    "@babel/cli": "^7.12.8",
-    "@babel/core": "^7.12.9",
-    "@babel/preset-env": "^7.12.7",
-    "@babel/preset-react": "^7.12.7",
-    "@babel/register": "^7.12.1",
-    "@parcel/resolver-default": "^2.0.0-beta.1",
     "concurrently": "^5.3.0",
     "nodemon": "^2.0.6",
-    "parcel": "^2.0.0-beta.1",
     "prettier": "^2.2.0",
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1"
+    "react": "16.14.x",
+    "react-dom": "16.14.x",
+    "rimraf": "^6.0.1",
+    "svgo": "^3.3.2",
+    "vite": "^6.3.5"
   }
 }

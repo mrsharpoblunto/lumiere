@@ -57,10 +57,10 @@ class Movable {
 
   getBoundingRect() {
     return {
-      top: this._y + this.yOffset,
-      left: this._x + this.xOffset,
-      bottom: this._y + this.yOffset + this.height,
-      right: this._x + this.xOffset + this.width,
+      top: this._yo >= 0 ? (this._y + this.yOffset) : (this._y - this.yOffset - this.height),
+      left: this._xo >= 0 ? (this._x + this.xOffset) : (this._x - this.xOffset - this.width),
+      bottom: this._yo >= 0 ? (this._y + this.yOffset + this.height) : (this._y - this.yOffset),
+      right: this._xo >= 0 ? (this._x + this.xOffset + this.width) : (this._x - this.xOffset),
     };
   }
 
@@ -142,7 +142,7 @@ class ArawanaFish extends Movable {
       .drawLine(this.x(11), this.y(-3), this.x(12), this.y(-3));
   }
 
-  setColors(main, fin) {
+  setColors(main) {
     this._main = main;
     this._mainBright = mul({...main}, 1.2, 255);
     this._mainDark = mul({...main}, 0.8, 255);
@@ -574,9 +574,9 @@ export default function (width, height) {
           const rect = m.getBoundingRect();
           if (
             rect.right < 0 ||
-            rect.left > width - 1 ||
+            rect.left > width ||
             rect.bottom < 0 ||
-            rect.top > height - 1
+            rect.top > height
           ) {
             movable[layer].splice(i, 1);
             respawn++;

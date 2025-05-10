@@ -1,16 +1,10 @@
 import EventEmitter from 'events';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import * as M from 'rpi-led-matrix';
 import * as config from './config.mjs';
 import visualizations from '../shared/viz/index.mjs';
 import {MATRIX_WIDTH, MATRIX_HEIGHT} from '../shared/config.mjs';
 import {AudioPlayer} from './audio-player.mjs';
 import {patchMatrix} from '../shared/viz/helpers.mjs';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 export class VizController extends EventEmitter {
   constructor(state) {
@@ -69,7 +63,7 @@ export class VizController extends EventEmitter {
     flash();
   }
 
-  _afterSync(matrix, dt, t) {
+  _afterSync(_matrix, dt, t) {
     const viz = this.visualizations[this.state.visualization];
     try {
       viz.run(this.matrix, dt, t);
