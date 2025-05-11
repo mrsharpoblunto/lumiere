@@ -79,7 +79,7 @@ export function drawAsset(matrix, x, y, asset) {
       const targetX = x + px;
       const targetY = y + py;
       if (targetX >= 0 && targetY >= 0) {
-        matrix.setPixel(targetX, targetY, { r, g, b });
+        matrix.fgColor({r,g,b}).setPixel(targetX, targetY);
       }
     }
   }

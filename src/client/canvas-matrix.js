@@ -168,7 +168,7 @@ export class CanvasMatrix {
       // Fill entire canvas
       for (let y = 0; y < this._height; y++) {
         for (let x = 0; x < this._width; x++) {
-          this.setPixel(x, y, color);
+          this._setPixel(x, y, color);
         }
       }
     } else if (args.length === 4) {
@@ -190,27 +190,30 @@ export class CanvasMatrix {
       // Now fill the rectangle with the proper bounds
       for (let y = y0; y <= y1; y++) {
         for (let x = x0; x <= x1; x++) {
-          this.setPixel(x, y, color);
+          this._setPixel(x, y, color);
         }
       }
     } else if (args.length === 2) {
       // Set a single pixel
       const x = Math.floor(args[0]);
       const y = Math.floor(args[1]);
-      this.setPixel(x, y, color);
+      this._setPixel(x, y, color);
     }
     return this;
   }
 
-  setPixel(x, y, color) {
+  setPixel(x, y) {
+    return this._setPixel(x, y, this._fgColor);
+  }
+
+  _setPixel(x, y, color) {
     if (x < 0 || x >= this._width || y < 0 || y >= this._height) {
       return this;
     }
     const index = this._getIndex(x, y);
-    const pixelColor = color || this._fgColor;
-    this._buffer[index] = pixelColor.r;
-    this._buffer[index+1] = pixelColor.g;
-    this._buffer[index+2] = pixelColor.b;
+    this._buffer[index] = color.r;
+    this._buffer[index+1] = color.g;
+    this._buffer[index+2] = color.b;
     this._buffer[index+3] = 255;
     return this;
   }

@@ -239,7 +239,7 @@ export default function (width, height) {
       drawAsset(matrix, cx - foliage.width / 2, 1, foliage);
       for (let i = 0; i < foliageFlicker.length; ++i) {
         const f = foliageFlicker[i];
-        matrix.setPixel(f.x, f.y, f.color);
+        matrix.fgColor(f.color).setPixel(f.x, f.y);
       }
 
       // draw particles
@@ -248,7 +248,7 @@ export default function (width, height) {
         const vec = grid.getVector(p.x, p.y);
         p.y += vec.y * PARTICLE_FALL_SPEED;
         p.x += vec.x * PARTICLE_FALL_SPEED;
-        matrix.setPixel(Math.floor(p.x), Math.floor(p.y), p.color);
+        matrix.fgColor(p.color).setPixel(Math.floor(p.x), Math.floor(p.y));
       }
 
 
