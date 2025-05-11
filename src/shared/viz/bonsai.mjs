@@ -97,10 +97,11 @@ export default function (width, height) {
     name: 'Bonsai',
     audio: 'audio/bonsai.mp3',
     light: {
-      bri: 254,
-      hue: 65440,
-      sat: 202,
+      bri: 204,
+      hue: 35680,
+      sat: 133,
     },
+    volume: 12,
     run: (matrix, _dt, _t) => {
       // update clouds
       for (let i = 0; i < clouds.length; ++i) {
@@ -217,7 +218,7 @@ export default function (width, height) {
         }
       }
 
-      matrix.clear();
+      matrix.brightness(80).clear();
 
       // draw background
       for (let y = 0; y < height; y++) {

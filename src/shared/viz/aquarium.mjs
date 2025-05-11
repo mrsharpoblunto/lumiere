@@ -522,6 +522,7 @@ export default function (width, height) {
       hue: 40730,
       sat: 247,
     },
+    volume: 18,
     run: (matrix, dt, t) => {
       for (let a of attractors) {
         a.x += a.dx;
@@ -587,7 +588,7 @@ export default function (width, height) {
         spawnFish(movable, width, height);
       }
 
-      matrix.clear();
+      matrix.brightness(100).clear();
 
       //background
       for (let y = 0; y < height; ++y) {

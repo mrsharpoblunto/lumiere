@@ -87,8 +87,9 @@ export default function (width, height) {
       hue: 65440,
       sat: 202,
     },
+    volume: 30,
     run: (matrix, dt, t) => {
-      matrix.clear();
+      matrix.brightness(100).clear();
 
       // cycle the attractor back and forth
       for (let a of attractors) {

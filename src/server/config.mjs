@@ -37,6 +37,7 @@ export const VIZ_KEY = 'viz_state';
 export const WEB_USER = 'web user';
 export const HOMEKIT_USER = 'HomeKit user';
 
+export const VOLUME_COMMAND = 'amixer set PCM';
 export const AUDIO_COMMAND = 'omxplayer';
 export const AUDIO_ARGS = ['-o', 'alsa:hw:1,0', '--loop'];
 

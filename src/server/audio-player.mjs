@@ -1,8 +1,8 @@
 /**
  * @format
  */
-import {AUDIO_COMMAND, AUDIO_ARGS} from './config.mjs';
-import {spawn} from 'child_process';
+import {AUDIO_COMMAND, VOLUME_COMMAND, AUDIO_ARGS} from './config.mjs';
+import {spawn, exec} from 'child_process';
 import kill from 'tree-kill';
 
 export class AudioPlayer {
@@ -10,9 +10,15 @@ export class AudioPlayer {
     this._current = null;
   }
 
-  play(file) {
+  play(file, volume) {
     this.stop();
     this._current = spawn(AUDIO_COMMAND, [...AUDIO_ARGS, file]);
+    exec(`${VOLUME_COMMAND} ${volume}%`, (error) => {
+      if (error) {
+        console.error(`exec error setting volume: ${error}`);
+        return;
+      }
+    });
 
     this._current.stdout.on('data', data => {
       console.log(`audio stdout:\n${data}`);
