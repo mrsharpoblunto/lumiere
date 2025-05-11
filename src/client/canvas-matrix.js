@@ -48,12 +48,12 @@ export class CanvasMatrix {
     const copyHeight = Math.min(h, this._height);
     for (let y = 0; y < copyHeight; y++) {
       for (let x = 0; x < copyWidth; x++) {
-        const srcIndex = (y * w + x) * 4;
+        const srcIndex = (y * w + x) * 3;
         const destIndex = this._getIndex(x,y);
         this._buffer[destIndex] = buffer[srcIndex];
         this._buffer[destIndex + 1] = buffer[srcIndex + 1];
         this._buffer[destIndex + 2] = buffer[srcIndex + 2];
-        this._buffer[destIndex + 3] = buffer[srcIndex + 3];
+        this._buffer[destIndex + 3] = 255;
       }
     }
 

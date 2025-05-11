@@ -8,7 +8,8 @@
     "server": "node src/server/index.mjs",
     "dev:server": "nodemon --watch src/server --inspect src/server/index.mjs",
     "dev:client": "vite --port 3001",
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\""
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "build:assets": "node scripts/png-to-mjs.js"
   },
   "repository": {
     "type": "git",
@@ -44,6 +45,7 @@
     "react": "16.14.x",
     "react-dom": "16.14.x",
     "rimraf": "^6.0.1",
+    "sharp": "^0.33.2",
     "svgo": "^3.3.2",
     "vite": "^6.3.5"
   }

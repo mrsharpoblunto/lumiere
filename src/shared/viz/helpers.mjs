@@ -35,8 +35,16 @@ export function mul(v0, f, max) {
   }
 }
 
+export function colorEquals(c0,c1) {
+  return c0.r === c1.r && c0.g === c1.g && c0.b === c1.b;
+}
+
 export function lerpColor(c0, c1, t) {
-  return v0 * (1 - t) + v1 * t;
+  return {
+    r: c0.r * (1 - t) + c1.r * t,
+    g: c0.g * (1 - t) + c1.g * t,
+    b: c0.b * (1 - t) + c1.b * t,
+  }
 }
 
 export function vecNormalize(v) {
@@ -48,4 +56,33 @@ export function vecNormalize(v) {
 
 export function vecLength(v) {
   return Math.sqrt(Math.pow(v.x, 2) + Math.pow(v.y, 2));
+}
+
+export function drawAsset(matrix, x, y, asset) {
+  const { width, height, data } = asset;
+
+  const FUCHSIA = [255, 0, 255];
+
+  for (let py = 0; py < height; py++) {
+    for (let px = 0; px < width; px++) {
+      // Calculate index in the data array (3 values per pixel - r,g,b)
+      const idx = (py * width + px) * 3;
+      const r = data[idx];
+      const g = data[idx + 1];
+      const b = data[idx + 2];
+
+      // Skip fuchsia (transparent) pixels
+      if (r === FUCHSIA[0] && g === FUCHSIA[1] && b === FUCHSIA[2]) {
+        continue;
+      }
+
+      const targetX = x + px;
+      const targetY = y + py;
+      if (targetX >= 0 && targetY >= 0) {
+        matrix.setPixel(targetX, targetY, { r, g, b });
+      }
+    }
+  }
+
+  return matrix;
 }
