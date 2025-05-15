@@ -86,3 +86,37 @@ export function drawAsset(matrix, x, y, asset) {
 
   return matrix;
 }
+
+export function drawAssetsLerp(matrix, x, y, asset1, asset2, lerp) {
+  const { width, height, data } = asset1;
+
+  const FUCHSIA = [255, 0, 255];
+
+  for (let py = 0; py < height; py++) {
+    for (let px = 0; px < width; px++) {
+      // Calculate index in the data array (3 values per pixel - r,g,b)
+      const idx = (py * width + px) * 3;
+      const r = data[idx];
+      const g = data[idx + 1];
+      const b = data[idx + 2];
+
+      // Skip fuchsia (transparent) pixels
+      if (r === FUCHSIA[0] && g === FUCHSIA[1] && b === FUCHSIA[2]) {
+        continue;
+      }
+
+      const targetX = x + px;
+      const targetY = y + py;
+      if (targetX >= 0 && targetY >= 0) {
+        const c = {
+          r: asset2.data[idx],
+          g: asset2.data[idx + 1],
+          b: asset2.data[idx + 2],
+        };
+        matrix.fgColor(lerpColor({r,g,b}, c, lerp)).setPixel(targetX, targetY);
+      }
+    }
+  }
+
+  return matrix;
+}

@@ -3,16 +3,35 @@
  */
 import {colorEquals, lerpColor, vecLength, vecNormalize} from './helpers.mjs';
 import * as background from '../assets/cherry-blossom-background.mjs';
+import * as foliage from '../assets/cherry-blossom-foliage.mjs';
 import * as cloud1 from '../assets/cherry-blossom-cloud-1.mjs';
 import * as cloud2 from '../assets/cherry-blossom-cloud-2.mjs';
 import * as cloud3 from '../assets/cherry-blossom-cloud-3.mjs';
 import * as cloud4 from '../assets/cherry-blossom-cloud-4.mjs';
 import * as cloud5 from '../assets/cherry-blossom-cloud-5.mjs';
-import * as foliage from '../assets/cherry-blossom-foliage.mjs';
+import * as backgroundNight from '../assets/cherry-blossom-background-night.mjs';
+import * as foliageNight from '../assets/cherry-blossom-foliage-night.mjs';
+import * as cloud1Night from '../assets/cherry-blossom-cloud-1-night.mjs';
+import * as cloud2Night from '../assets/cherry-blossom-cloud-2-night.mjs';
+import * as cloud3Night from '../assets/cherry-blossom-cloud-3-night.mjs';
+import * as cloud4Night from '../assets/cherry-blossom-cloud-4-night.mjs';
+import * as cloud5Night from '../assets/cherry-blossom-cloud-5-night.mjs';
+import * as foliageSunset from '../assets/cherry-blossom-foliage-sunset.mjs';
+import * as backgroundSunset from '../assets/cherry-blossom-background-sunset.mjs';
+import * as cloud1Sunset from '../assets/cherry-blossom-cloud-1-sunset.mjs';
+import * as cloud2Sunset from '../assets/cherry-blossom-cloud-2-sunset.mjs';
+import * as cloud3Sunset from '../assets/cherry-blossom-cloud-3-sunset.mjs';
+import * as cloud4Sunset from '../assets/cherry-blossom-cloud-4-sunset.mjs';
+import * as cloud5Sunset from '../assets/cherry-blossom-cloud-5-sunset.mjs';
+import * as moon from '../assets/moon.mjs';
+
+import { LATITUDE, LONGITUDE } from '../config.mjs';
+import SunCalc from 'suncalc';
 
 import {FlowGrid} from './flow-grid.mjs';
-import { drawAsset } from './helpers.mjs';
+import { drawAsset, drawAssetsLerp } from './helpers.mjs';
 
+const MAX_STARS = 64;
 const MAX_CLOUDS = 4;
 const MIN_CLOUD_SPEED = 0.005;
 const MAX_CLOUD_SPEED = 0.01;
@@ -76,22 +95,66 @@ export default function (width, height) {
 
 
   // colors
-  const skyBottom = {r: 179, g: 206, b: 191};
-  const skyTop = {r: 98, g: 175, b: 203};
-  const foliageDark = {r: 132, g: 96, b: 99};
-  const foliageMid = {r: 202, g: 104, b: 107}; 
-  const foliageLight = {r: 227, g: 171, b: 173};
+  const dayPalette = {
+    skyBottom: {r: 179, g: 206, b: 191},
+    skyTop: {r: 98, g: 175, b: 203},
+    foliageDark: {r: 132, g: 96, b: 99},
+    foliageMid: {r: 202, g: 104, b: 107},
+    foliageLight: {r: 227, g: 171, b: 173},
+    background,
+    foliage,
+    availableClouds: [
+      cloud1,
+      cloud2,
+      cloud3,
+      cloud4,
+      cloud5,
+    ],
+  };
+  const sunxPalette = {
+    skyBottom: {r: 251, g: 66, b: 1},
+    skyTop: {r: 30, g: 51, b: 100},
+    foliageDark: {r: 134, g: 60, b: 83},
+    foliageMid: {r: 233, g: 28, b: 84},
+    foliageLight: {r: 227, g: 111, b: 142},
+    background: backgroundSunset,
+    foliage: foliageSunset,
+    availableClouds: [
+      cloud1Sunset,
+      cloud2Sunset,
+      cloud3Sunset,
+      cloud4Sunset,
+      cloud5Sunset,
+    ],
+  };
+  const nightPalette = {
+    skyBottom: {r: 17, g: 45, b: 77},
+    skyTop: {r: 11, g: 31, b: 36},
+    foliageDark: {r: 28, g: 37, b: 63},
+    foliageMid: {r: 27, g: 51, b: 178},
+    foliageLight: {r: 116, g: 140, b: 228},
+    background: backgroundNight,
+    foliage: foliageNight,
+    availableClouds: [
+      cloud1Night,
+      cloud2Night,
+      cloud3Night,
+      cloud4Night,
+      cloud5Night,
+    ],
+  };
 
-  const availableClouds = [
-    cloud1,
-    cloud2,
-    cloud3,
-    cloud4,
-    cloud5,
-  ];
   const clouds = [];
   const foliageFlicker = [];
   const particles = [];
+  const stars = [];
+  let prevDate = null;
+  let sunRiseStart = null;
+  let sunRisePeak = null;
+  let sunRiseEnd = null;
+  let sunSetStart = null;
+  let sunSetPeak = null;
+  let sunSetEnd = null;
 
   return {
     name: 'Bonsai',
@@ -103,6 +166,50 @@ export default function (width, height) {
     },
     volume: 12,
     run: (matrix, _dt, _t) => {
+      let now = new Date();
+      if (!prevDate || now.getDay() !== prevDate.getDay()) {
+        const times = SunCalc.getTimes(new Date(),LATITUDE, LONGITUDE);
+        prevDate = now;
+        sunRiseStart = times.sunrise.getTime();
+        sunRiseEnd = times.goldenHourEnd.getTime();
+        sunRisePeak = sunRiseStart + ((sunRiseEnd - sunRiseStart) / 2);
+        sunSetStart = times.sunsetStart.getTime();
+        sunSetEnd = times.night.getTime();
+        sunSetPeak = sunSetStart + ((sunSetEnd - sunSetStart) / 2);
+      }
+
+      let palette1 = dayPalette;
+      let palette2 = dayPalette;
+      let paletteLerp = 1.0;
+
+      now = now.getTime();
+      if (now >= sunRiseStart && now <= sunRisePeak) {
+        // night -> sunrise
+        palette1 = nightPalette;
+        palette2 = sunxPalette;
+        paletteLerp = (now - sunRiseStart) / (sunRisePeak - sunRiseStart);
+      } else if (now > sunRisePeak && now < sunRiseEnd) {
+        // sunrise -> day
+        palette1 = sunxPalette;
+        palette2 = dayPalette;
+        paletteLerp = (now - sunRisePeak) / (sunRiseEnd - sunRisePeak);
+      } else if (now > sunRiseEnd && now < sunSetStart) {
+        // day
+      } else if (now >= sunSetStart && now <= sunSetPeak) {
+        // day -> sunset
+        palette1 = dayPalette;
+        palette2 = sunxPalette;
+        paletteLerp = (now - sunSetStart) / (sunSetPeak - sunSetStart);
+      } else if (now > sunSetPeak && now < sunSetEnd) {
+        // sunset -> night
+        palette1 = sunxPalette;
+        palette2 = nightPalette;
+        paletteLerp = (now - sunSetPeak) / (sunSetEnd - sunSetPeak);
+      } else {
+        // night
+        palette1 = palette2 = nightPalette;
+      }
+
       // update clouds
       for (let i = 0; i < clouds.length; ++i) {
         const cloud = clouds[i];
@@ -116,19 +223,19 @@ export default function (width, height) {
       }
       const firstRun = clouds.length === 0;
       while (clouds.length < MAX_CLOUDS) {
-        const index = Math.floor(Math.random() * availableClouds.length);
+        const index = Math.floor(Math.random() * palette1.availableClouds.length);
         const vx = Math.random() * (MAX_CLOUD_SPEED - MIN_CLOUD_SPEED) + MIN_CLOUD_SPEED;
-        if (index < availableClouds.length) {
-          const cloud = availableClouds[index];
+        if (index < palette1.availableClouds.length) {
+          const cloud = palette1.availableClouds[index];
           clouds.push({
-            cloud,
+            cloud: index,
             x: -cloud.width + (firstRun ? Math.random() * width: 0),
             y: Math.floor(Math.random() * (height - cloud.height) - 3),
             vx,
           });
         } else {
           clouds.push({
-            cloud: null,
+            cloud: -1,
             x: (firstRun ? Math.random() * width : 0),
             y: 0,
             vx,
@@ -158,14 +265,17 @@ export default function (width, height) {
           };
           // check its not transparent
           if (foliageColor.r !== 255 || foliageColor.g !== 0 || foliageColor.b !== 255) {
-            if (colorEquals(foliageColor, foliageDark)) {
-              foliageColor = foliageMid;
-            } else if (colorEquals(foliageColor, foliageMid)) {
-              foliageColor = foliageLight;
-            } else if (colorEquals(foliageColor, foliageLight)) {
+            if (colorEquals(foliageColor, dayPalette.foliageDark)) {
+              foliageColor = lerpColor(palette1.foliageMid, palette2.foliageMid, paletteLerp);
+            } else if (colorEquals(foliageColor, dayPalette.foliageMid)) {
+              foliageColor = lerpColor(palette1.foliageLight, palette2.foliageLight, paletteLerp);
+            } else if (colorEquals(foliageColor, dayPalette.foliageLight)) {
               foliageColor = Math.random() < 0.5 ? 
-                foliageMid :
-                lerpColor(skyBottom, skyTop, 1.0 - ((y+1) / height));
+                lerpColor(palette1.foliageMid, palette2.foliageMid, paletteLerp) :
+                lerpColor(
+                  lerpColor(palette1.skyBottom, palette2.skyBottom, paletteLerp),
+                  lerpColor(palette1.skyTop, palette2.skyTop, paletteLerp),
+                  1.0 - ((y+1) / height));
             }
             foliageFlicker.push({
               x: cx - foliage.width / 2 + x,
@@ -212,32 +322,91 @@ export default function (width, height) {
             particles.push({
               x: cx - foliage.width / 2 + x,
               y: y + 1,
-              color: lerpColor(foliageMid, foliageLight, Math.random()),
+              color: lerpColor(
+                lerpColor(palette1.foliageMid, palette2.foliageMid, paletteLerp),
+                lerpColor(palette1.foliageLight, palette2.foliageLight, paletteLerp),
+                Math.random()),
             });
           }
         }
       }
 
+
       matrix.brightness(80).clear();
 
       // draw background
       for (let y = 0; y < height; y++) {
-        matrix.fgColor(lerpColor(skyBottom, skyTop, 1.0 - (y / height))).drawLine(0, y, width, y);
+        matrix.fgColor(
+          lerpColor(
+            lerpColor(palette1.skyBottom, palette2.skyBottom, paletteLerp),
+            lerpColor(palette1.skyTop, palette2.skyTop, paletteLerp),
+            1.0 - ((y+1) / height))
+        ).drawLine(0, y, width, y);
+      }
+
+      if (palette1 === nightPalette || palette2 === nightPalette) {
+        if (stars.length === 0) {
+          for (let i = 0; i < MAX_STARS; ++i) {
+            stars.push({
+              x: Math.floor(Math.random() * width),
+              y: Math.floor(Math.pow(Math.random(), 2) * height),
+              color: lerpColor({
+                r: 33,
+                g: 55,
+                b: 71,
+              }, {
+                r: 88,
+                g: 99,
+                b: 108,
+              },Math.random())
+            });
+          }
+        }
+        const l = palette1 === nightPalette  && palette2 !== nightPalette ? 1.0 - paletteLerp : paletteLerp;
+        for (let i = 0; i < stars.length; ++i) {
+          const star = stars[i];
+          const color = lerpColor(
+            star.color,
+            lerpColor(
+              lerpColor(palette1.skyBottom, palette2.skyBottom, paletteLerp),
+              lerpColor(palette1.skyTop, palette2.skyTop, paletteLerp),
+              1.0 - ((star.y+1) / height)),
+            Math.pow(star.y / height, l)
+          );
+          matrix.fgColor(color).setPixel(star.x, star.y);
+        }
+      }
+
+      // draw the moon
+      if (palette1 === nightPalette && palette2 === nightPalette) {
+        let n = now;
+        if (n < sunSetEnd) {
+          n += 24*60*60*1000;
+        }
+        let moonY = (n - sunSetEnd) / (24*60*60*1000 - (sunSetEnd - sunRiseStart));
+        drawAsset(matrix, cx + 5 + Math.pow(moonY * 3,2)*cx, height - (height * moonY * 3), moon);
       }
 
       // draw clouds
       for (let i = 0; i < clouds.length; ++i) {
         const cloud = clouds[i];
-        if (cloud.cloud) {
-          drawAsset(matrix, cloud.x, cloud.y, cloud.cloud);
+        if (cloud.cloud>=0) {
+          drawAssetsLerp(
+            matrix, 
+            cloud.x, 
+            cloud.y, 
+            palette1.availableClouds[cloud.cloud], 
+            palette2.availableClouds[cloud.cloud], 
+            paletteLerp
+          );
         }
       }
 
       // draw background
-      drawAsset(matrix, 0, 0, background);
+      drawAssetsLerp(matrix, 0, 0, palette1.background, palette2.background, paletteLerp);
 
       // draw foliage
-      drawAsset(matrix, cx - foliage.width / 2, 1, foliage);
+      drawAssetsLerp(matrix, cx - foliage.width / 2, 1, palette1.foliage, palette2.foliage, paletteLerp);
       for (let i = 0; i < foliageFlicker.length; ++i) {
         const f = foliageFlicker[i];
         matrix.fgColor(f.color).setPixel(f.x, f.y);
@@ -251,34 +420,6 @@ export default function (width, height) {
         p.x += vec.x * PARTICLE_FALL_SPEED;
         matrix.fgColor(p.color).setPixel(Math.floor(p.x), Math.floor(p.y));
       }
-
-
-      if (process.env.NODE_ENV !== 'production') {
-        matrix.fgColor({r: 255, g: 255, b: 255});
-        for (let a of attractors) {
-          matrix.setPixel(
-            ((a.x + 0.5) / grid.resolution.x) * width,
-            ((a.y + 0.5) / grid.resolution.y) * height,
-          );
-        }
-        matrix.fgColor({r: 0, g: 0, b: 255});
-        for (let y = 0; y < grid.resolution.y; ++y) {
-          for (let x = 0; x < grid.resolution.x; ++x) {
-            const v = grid.vectors[y * grid.resolution.x + x];
-            const center = {
-              x: ((x + 0.5) / grid.resolution.x) * width,
-              y: ((y + 0.5) / grid.resolution.y) * height,
-            };
-            matrix.drawLine(
-              center.x - v.x,
-              center.y - v.y,
-              center.x + v.x,
-              center.y + v.y,
-            );
-          }
-        }
-      }
-
     },
   };
 }
