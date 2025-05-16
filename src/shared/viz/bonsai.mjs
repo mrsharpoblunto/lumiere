@@ -373,7 +373,9 @@ export default function (width, height) {
             });
           }
         }
-        const l = palette1 === nightPalette  && palette2 !== nightPalette ? 1.0 - paletteLerp : paletteLerp;
+        const l = palette1 === nightPalette && palette2 !== nightPalette ? 
+          1.0 - paletteLerp : 
+          palette1 === nightPalette && palette2 === nightPalette ? 1.0 : paletteLerp;
         for (let i = 0; i < stars.length; ++i) {
           const star = stars[i];
           const color = lerpColor(
