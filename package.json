@@ -40,6 +40,7 @@
     "winston": "^3.3.3"
   },
   "devDependencies": {
+    "@fsouza/prettierd": "^0.26.1",
     "concurrently": "^5.3.0",
     "nodemon": "^2.0.6",
     "prettier": "^2.2.0",

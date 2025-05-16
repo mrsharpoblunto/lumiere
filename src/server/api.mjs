@@ -1,24 +1,24 @@
 /*
  * @format
  */
-import * as config from './config.mjs';
+import * as config from "./config.mjs";
 
 export function configureApiRoutes(app) {
   function waitForVizEvent(timeout, callback) {
     let listener = null;
     let timeoutHandle = setTimeout(() => {
-      app.vizController.removeListener('change', listener);
+      app.vizController.removeListener("change", listener);
       callback(true, null);
     }, timeout);
-    listener = state => {
-      app.vizController.removeListener('change', listener);
+    listener = (state) => {
+      app.vizController.removeListener("change", listener);
       clearTimeout(timeoutHandle);
       callback(false, state);
     };
-    app.vizController.addListener('change', listener);
+    app.vizController.addListener("change", listener);
   }
 
-  app.get('/api/1/poll-state', (req, res) => {
+  app.get("/api/1/poll-state", (req, res) => {
     const queryState = JSON.parse(req.query.state);
 
     if (
@@ -32,9 +32,9 @@ export function configureApiRoutes(app) {
       });
     } else {
       res.writeHead(200, {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       });
-      res.write(''); // flush headers to the client
+      res.write(""); // flush headers to the client
       waitForVizEvent(
         req.query.timeout < 60000 ? req.query.timeout : 60000,
         (timedOut, event) => {
@@ -45,28 +45,28 @@ export function configureApiRoutes(app) {
                 ? false
                 : JSON.stringify(queryState) !== JSON.stringify(event.state),
               state: timedOut ? null : event.state,
-            }),
+            })
           );
           res.end();
-        },
+        }
       );
     }
   });
 
-  app.post('/api/1/report-error', (req, res) => {
+  app.post("/api/1/report-error", (req, res) => {
     app.logger.error(
-      `Client error: ${req.body.source}:${req.body.lineno}:${req.body.colno} - ${req.body.message}\n${req.body.stack}`,
+      `Client error: ${req.body.source}:${req.body.lineno}:${req.body.colno} - ${req.body.message}\n${req.body.stack}`
     );
   });
 
-  app.post('/api/1/toggle-on', async (req, res) => {
+  app.post("/api/1/toggle-on", async (req, res) => {
     try {
-      const {on} = app.vizController.toggleOn(config.WEB_USER);
+      const { on } = app.vizController.toggleOn(config.WEB_USER);
       await app.storage.setItem(
         config.VIZ_KEY,
-        JSON.stringify(app.vizController.getState()),
+        JSON.stringify(app.vizController.getState())
       );
-      app.logger.info('Set on state to ' + on);
+      app.logger.info("Set on state to " + on);
       res.json({
         success: true,
         on,
@@ -79,18 +79,18 @@ export function configureApiRoutes(app) {
     }
   });
 
-  app.post('/api/1/set-visualization', async (req, res) => {
+  app.post("/api/1/set-visualization", async (req, res) => {
     try {
-      const {visualization} = await app.vizController.setVisualization(
+      const { visualization } = await app.vizController.setVisualization(
         parseInt(req.body.visualization, 10),
-        config.WEB_USER,
+        config.WEB_USER
       );
       await app.storage.setItem(
         config.VIZ_KEY,
-        JSON.stringify(app.vizController.getState()),
+        JSON.stringify(app.vizController.getState())
       );
       app.logger.info(
-        'Set viz to ' + app.vizController.visualizations[visualization].name,
+        "Set viz to " + app.vizController.visualizations[visualization].name
       );
       res.json({
         success: true,

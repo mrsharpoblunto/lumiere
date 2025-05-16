@@ -1,36 +1,41 @@
-import EventEmitter from 'events';
-import * as M from 'rpi-led-matrix';
-import * as config from './config.mjs';
-import visualizations from '../shared/viz/index.mjs';
-import {MATRIX_WIDTH, MATRIX_HEIGHT} from '../shared/config.mjs';
-import {AudioPlayer} from './audio-player.mjs';
-import {patchMatrix} from '../shared/viz/helpers.mjs';
+import EventEmitter from "events";
+import * as M from "rpi-led-matrix";
+import * as config from "./config.mjs";
+import visualizations from "../shared/viz/index.mjs";
+import { MATRIX_WIDTH, MATRIX_HEIGHT } from "../shared/config.mjs";
+import { AudioPlayer } from "./audio-player.mjs";
+import { patchMatrix } from "../shared/viz/helpers.mjs";
 
 export class VizController extends EventEmitter {
   constructor(state) {
     super();
 
-    this.matrix = patchMatrix(new M.LedMatrix(
-      {
-        ...M.LedMatrix.defaultMatrixOptions(),
-        rows: MATRIX_HEIGHT,
-        cols: MATRIX_WIDTH,
-        hardwareMapping: M.GpioMapping.AdafruitHatPwm,
-        disableHardwarePulsing: process.env.NODE_ENV !== 'production',
-      },
-      {
-        ...M.LedMatrix.defaultRuntimeOptions(),
-        dropPrivileges: 0,
-        gpioSlowdown: 3,
-      },
-    ));
+    this.matrix = patchMatrix(
+      new M.LedMatrix(
+        {
+            ...M.LedMatrix.defaultMatrixOptions(),
+          rows: MATRIX_HEIGHT,
+          cols: MATRIX_WIDTH,
+          hardwareMapping: M.GpioMapping.AdafruitHatPwm,
+          disableHardwarePulsing: process.env.NODE_ENV !== "production",
+        },
+        {
+          ...M.LedMatrix.defaultRuntimeOptions(),
+          dropPrivileges: 0,
+          gpioSlowdown: 3,
+        }
+      )
+    );
 
     this.audioPlayer = new AudioPlayer();
 
     this.state = state;
     this.activeTimeout = 0;
     this.identifying = false;
-    this.visualizations = visualizations(this.matrix.width(), this.matrix.height());
+    this.visualizations = visualizations(
+      this.matrix.width(),
+      this.matrix.height()
+    );
     this._updateViz();
   }
 
@@ -47,7 +52,7 @@ export class VizController extends EventEmitter {
       if (count >= 0) {
         this.matrix
           .clear()
-          .fgColor(status ? {r:0,g:0,b:0} : {r:0, g: 0,b: 0})
+          .fgColor(status ? { r: 0, g: 0, b: 0 } : { r: 0, g: 0, b: 0 })
           .fill(0, 0, this.matrix.width() - 1, this.matrix.height() - 1);
         --count;
         status = status ? 0 : 1;
@@ -55,8 +60,8 @@ export class VizController extends EventEmitter {
       } else {
         this.identifying = false;
         if (wasOn) {
-        this.setOn(true, config.WEB_USER);
-      }
+          this.setOn(true, config.WEB_USER);
+        }
       }
     };
     this.matrix.afterSync(flash);
@@ -71,9 +76,9 @@ export class VizController extends EventEmitter {
       console.error(ex.stack);
     }
     this.activeTimeout = setTimeout(() => {
-      if (this.state.on) { 
+      if (this.state.on) {
         try {
-          this.matrix.sync(); 
+          this.matrix.sync();
         } catch (ex) {
           console.error(ex.stack);
         }
@@ -88,7 +93,7 @@ export class VizController extends EventEmitter {
     }
     if (!this.state.on) {
       this.matrix
-        .afterSync(() =>{})
+        .afterSync(() => {})
         .clear()
         .sync();
       this.audioPlayer.stop();
@@ -108,7 +113,7 @@ export class VizController extends EventEmitter {
     if (!this.identifying) {
       this.state.on = !this.state.on;
       this._updateViz();
-      this.emit('change', {state: this.state, source});
+      this.emit("change", { state: this.state, source });
     }
     return this.state;
   }
@@ -117,16 +122,20 @@ export class VizController extends EventEmitter {
     if (!this.identifying && on !== this.state.on) {
       this.state.on = on;
       this._updateViz();
-      this.emit('change', {state: this.state, source});
+      this.emit("change", { state: this.state, source });
     }
     return this.state;
   }
 
   setVisualization(viz, source) {
-    if (viz >= 0 && viz < this.visualizations.length && this.state.visualization !== viz) {
+    if (
+      viz >= 0 &&
+      viz < this.visualizations.length &&
+      this.state.visualization !== viz
+    ) {
       this.state.visualization = viz;
       this._updateViz();
-      this.emit('change', {state: this.state, source});
+      this.emit("change", { state: this.state, source });
     }
     return this.state;
   }

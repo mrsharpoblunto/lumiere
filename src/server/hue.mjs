@@ -1,4 +1,4 @@
-import http from 'http';
+import http from "http";
 
 export class HueAPI {
   constructor(bridge, user) {
@@ -6,7 +6,7 @@ export class HueAPI {
     this.user = user;
   }
   getGroups() {
-    return this._httpGet('/groups');
+    return this._httpGet("/groups");
   }
   getGroup(groupId) {
     return this._httpGet(`/groups/${groupId}`);
@@ -21,24 +21,24 @@ export class HueAPI {
           {
             host: this.bridge,
             port: 80,
-            path: '/api/' + this.user + path,
+            path: "/api/" + this.user + path,
           },
-          res => {
-            res.setEncoding('utf8');
-            let body = '';
-            res.on('data', data => {
+          (res) => {
+            res.setEncoding("utf8");
+            let body = "";
+            res.on("data", (data) => {
               body += data;
             });
-            res.on('end', () => {
+            res.on("end", () => {
               let parsed;
               try {
                 parsed = JSON.parse(body);
               } catch (ex) {}
-              resolve({statusCode: res.statusCode, body: parsed || body});
+              resolve({ statusCode: res.statusCode, body: parsed || body });
             });
-          },
+          }
         )
-        .on('error', e => {
+        .on("error", (e) => {
           reject(e);
         });
     });
@@ -49,26 +49,26 @@ export class HueAPI {
         {
           host: this.bridge,
           port: 80,
-          method: 'PUT',
-          path: '/api/' + this.user + path,
-          headers: {'Content-Type': 'application/json'},
+          method: "PUT",
+          path: "/api/" + this.user + path,
+          headers: { "Content-Type": "application/json" },
         },
-        res => {
-          res.setEncoding('utf8');
-          let body = '';
-          res.on('data', data => {
+        (res) => {
+          res.setEncoding("utf8");
+          let body = "";
+          res.on("data", (data) => {
             body += data;
           });
-          res.on('end', () => {
+          res.on("end", () => {
             let parsed;
             try {
               parsed = JSON.parse(body);
             } catch (ex) {}
-            resolve({statusCode: res.statusCode, body: parsed || body});
+            resolve({ statusCode: res.statusCode, body: parsed || body });
           });
-        },
+        }
       );
-      req.on('error', e => {
+      req.on("error", (e) => {
         reject(e);
       });
       req.write(JSON.stringify(data));

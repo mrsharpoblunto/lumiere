@@ -1,9 +1,9 @@
 /**
  * @format
  */
-import {AUDIO_COMMAND, VOLUME_COMMAND, AUDIO_ARGS} from './config.mjs';
-import {spawn, exec} from 'child_process';
-import kill from 'tree-kill';
+import { AUDIO_COMMAND, VOLUME_COMMAND, AUDIO_ARGS } from "./config.mjs";
+import { spawn, exec } from "child_process";
+import kill from "tree-kill";
 
 export class AudioPlayer {
   constructor() {
@@ -27,14 +27,14 @@ export class AudioPlayer {
     this._currentFile = file;
     this._playFile(file);
   }
-  
+
   queue(file) {
     this._queuedFile = file;
     if (!this._current) {
       this._playQueuedFile();
     }
   }
-  
+
   _playQueuedFile() {
     if (this._queuedFile) {
       this._currentFile = this._queuedFile;
@@ -42,22 +42,22 @@ export class AudioPlayer {
     }
     this._playFile(this._currentFile);
   }
-  
+
   _playFile(file) {
     this._shouldRequeue = true;
     this._current = spawn(AUDIO_COMMAND, [...AUDIO_ARGS, `audio/${file}`]);
 
-    this._current.stdout.on('data', data => {
+    this._current.stdout.on("data", (data) => {
       console.log(`audio stdout:\n${data}`);
     });
 
-    this._current.stderr.on('data', data => {
+    this._current.stderr.on("data", (data) => {
       console.error(`audio stderr: ${data}`);
     });
-    this._current.on('error', err => {
+    this._current.on("error", (err) => {
       console.log(`audio error: ${err.message}`);
     });
-    this._current.on('close', code => {
+    this._current.on("close", (code) => {
       if (code !== 0) {
         console.log(`audio player exited with code ${code}`);
       }

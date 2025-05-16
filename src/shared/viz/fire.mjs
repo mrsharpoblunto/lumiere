@@ -1,8 +1,8 @@
 /**
  * @format
  */
-import {lerp, vecLength, vecNormalize} from './helpers.mjs';
-import {FlowGrid} from './flow-grid.mjs';
+import { lerp, vecLength, vecNormalize } from "./helpers.mjs";
+import { FlowGrid } from "./flow-grid.mjs";
 
 const MAX_PARTICLES = 64;
 const MAX_SIZE = 10;
@@ -15,7 +15,7 @@ const ATTRACTOR_JITTER = 0.01;
 function initParticles() {
   const particles = [];
   while (particles.length < MAX_PARTICLES) {
-    particles.push(genParticle({bright: {}, dim: {}}));
+    particles.push(genParticle({ bright: {}, dim: {} }));
   }
   return particles;
 }
@@ -40,7 +40,7 @@ function applyPointAttractors(grid, attractors) {
       v.y = -1;
       v.x = 0;
       for (let a of attractors) {
-        const attractorDirection = {x: a.x - x, y: a.y - y};
+        const attractorDirection = { x: a.x - x, y: a.y - y };
         const distance = vecLength(attractorDirection);
         if (distance !== 0) {
           attractorDirection.x /= distance;
@@ -80,8 +80,8 @@ export default function (width, height) {
   ];
 
   return {
-    name: 'Fire',
-    audio: 'fire.mp3',
+    name: "Fire",
+    audio: "fire.mp3",
     light: {
       bri: 254,
       hue: 65440,
@@ -139,15 +139,15 @@ export default function (width, height) {
           .fill(p.x - size, p.y - size, p.x + size, p.y + size);
       }
 
-      if (process.env.NODE_ENV !== 'production') {
-        matrix.fgColor({r: 255, g: 255, b: 255});
+      if (process.env.NODE_ENV !== "production") {
+        matrix.fgColor({ r: 255, g: 255, b: 255 });
         for (let a of attractors) {
           matrix.setPixel(
             ((a.x + 0.5) / grid.resolution.x) * matrix.width(),
-            1,
+            1
           );
         }
-        matrix.fgColor({r: 0, g: 0, b: 255});
+        matrix.fgColor({ r: 0, g: 0, b: 255 });
         for (let y = 0; y < grid.resolution.y; ++y) {
           for (let x = 0; x < grid.resolution.x; ++x) {
             const v = grid.vectors[y * grid.resolution.x + x];
@@ -159,7 +159,7 @@ export default function (width, height) {
               center.x - v.x,
               center.y - v.y,
               center.x + v.x,
-              center.y + v.y,
+              center.y + v.y
             );
           }
         }

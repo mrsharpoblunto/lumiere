@@ -1,7 +1,7 @@
 /**
  * @flow
  */
-import {vecLength, vecNormalize} from './helpers.mjs';
+import { vecLength, vecNormalize } from "./helpers.mjs";
 
 export class FlowGrid {
   constructor(width, height, resolution) {
@@ -12,7 +12,7 @@ export class FlowGrid {
 
     for (let y = 0; y < this.resolution.y; ++y) {
       for (let x = 0; x < this.resolution.x; ++x) {
-        this.vectors.push({x: 0.0, y: -1.0});
+        this.vectors.push({ x: 0.0, y: -1.0 });
       }
     }
   }

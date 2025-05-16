@@ -12,7 +12,7 @@ export function patchMatrix(matrix) {
 }
 
 export function lerp(v0, v1, t) {
-  if (typeof v0 === 'number') {
+  if (typeof v0 === "number") {
     return v0 * (1 - t) + v1 * t;
   } else {
     const result = {};
@@ -24,7 +24,7 @@ export function lerp(v0, v1, t) {
 }
 
 export function mul(v0, f, max) {
-  if (typeof v0 === 'number') {
+  if (typeof v0 === "number") {
     return v0 * f;
   } else {
     const result = {};
@@ -35,7 +35,7 @@ export function mul(v0, f, max) {
   }
 }
 
-export function colorEquals(c0,c1) {
+export function colorEquals(c0, c1) {
   return c0.r === c1.r && c0.g === c1.g && c0.b === c1.b;
 }
 
@@ -44,7 +44,7 @@ export function lerpColor(c0, c1, t) {
     r: c0.r * (1 - t) + c1.r * t,
     g: c0.g * (1 - t) + c1.g * t,
     b: c0.b * (1 - t) + c1.b * t,
-  }
+  };
 }
 
 export function vecNormalize(v) {
@@ -79,7 +79,7 @@ export function drawAsset(matrix, x, y, asset) {
       const targetX = x + px;
       const targetY = y + py;
       if (targetX >= 0 && targetY >= 0) {
-        matrix.fgColor({r,g,b}).setPixel(targetX, targetY);
+        matrix.fgColor({ r, g, b }).setPixel(targetX, targetY);
       }
     }
   }
@@ -113,7 +113,9 @@ export function drawAssetsLerp(matrix, x, y, asset1, asset2, lerp) {
           g: asset2.data[idx + 1],
           b: asset2.data[idx + 2],
         };
-        matrix.fgColor(lerpColor({r,g,b}, c, lerp)).setPixel(targetX, targetY);
+        matrix
+          .fgColor(lerpColor({ r, g, b }, c, lerp))
+          .setPixel(targetX, targetY);
       }
     }
   }

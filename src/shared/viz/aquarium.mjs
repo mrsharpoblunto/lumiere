@@ -1,17 +1,17 @@
 /**
  * @format
  */
-import {lerp, mul, vecLength, vecNormalize} from './helpers.mjs';
-import {FlowGrid} from './flow-grid.mjs';
+import { lerp, mul, vecLength, vecNormalize } from "./helpers.mjs";
+import { FlowGrid } from "./flow-grid.mjs";
 
 const FLOOR_LAYERS = 8;
-const SAND_BASE = {r: 128, g: 128, b: 64};
-const SAND_DARK = {r: 64, g: 64, b: 16};
+const SAND_BASE = { r: 128, g: 128, b: 64 };
+const SAND_DARK = { r: 64, g: 64, b: 16 };
 const SAND_TEXTURE_DENSITY = 5;
-const KELP = {r: 0, g: 102, b: 0};
+const KELP = { r: 0, g: 102, b: 0 };
 const KELP_DENSITY = 4;
-const WATER = {r: 0, g: 16, b: 96};
-const WATER_BASE = {r: 0, g: 32, b: 64};
+const WATER = { r: 0, g: 16, b: 96 };
+const WATER_BASE = { r: 0, g: 32, b: 64 };
 const FISH_COUNT = 2;
 const FISH_VELOCITY = 10;
 const FLOW_GRID_RESOLUTION = 8;
@@ -52,15 +52,27 @@ class Movable {
   }
 
   getPosition() {
-    return {x: this._x, y: this._y};
+    return { x: this._x, y: this._y };
   }
 
   getBoundingRect() {
     return {
-      top: this._yo >= 0 ? (this._y + this.yOffset) : (this._y - this.yOffset - this.height),
-      left: this._xo >= 0 ? (this._x + this.xOffset) : (this._x - this.xOffset - this.width),
-      bottom: this._yo >= 0 ? (this._y + this.yOffset + this.height) : (this._y - this.yOffset),
-      right: this._xo >= 0 ? (this._x + this.xOffset + this.width) : (this._x - this.xOffset),
+      top:
+        this._yo >= 0
+          ? this._y + this.yOffset
+          : this._y - this.yOffset - this.height,
+      left:
+        this._xo >= 0
+          ? this._x + this.xOffset
+          : this._x - this.xOffset - this.width,
+      bottom:
+        this._yo >= 0
+          ? this._y + this.yOffset + this.height
+          : this._y - this.yOffset,
+      right:
+        this._xo >= 0
+          ? this._x + this.xOffset + this.width
+          : this._x - this.xOffset,
     };
   }
 
@@ -70,7 +82,7 @@ class Movable {
   }
 
   getOrientation() {
-    return {x: this._xo, y: this._yo};
+    return { x: this._xo, y: this._yo };
   }
 
   x(x) {
@@ -138,15 +150,15 @@ class ArawanaFish extends Movable {
       .drawLine(this.x(8), this.y(3), this.x(3), this.y(7))
       .drawLine(this.x(7), this.y(3), this.x(2), this.y(7))
       // eye
-      .fgColor({r: 0, g: 0, b: 0})
+      .fgColor({ r: 0, g: 0, b: 0 })
       .drawLine(this.x(11), this.y(-3), this.x(12), this.y(-3));
   }
 
   setColors(main) {
     this._main = main;
-    this._mainBright = mul({...main}, 1.2, 255);
-    this._mainDark = mul({...main}, 0.8, 255);
-    this._fin = mul({...main}, 0.6, 255);
+    this._mainBright = mul({ ...main }, 1.2, 255);
+    this._mainDark = mul({ ...main }, 0.8, 255);
+    this._fin = mul({ ...main }, 0.6, 255);
   }
 }
 
@@ -176,9 +188,9 @@ class PufferFish extends Movable {
       .drawLine(this.x(-4), this.y(2), this.x(4), this.y(2))
       .drawLine(this.x(4), this.y(1), this.x(4), this.y(2))
       // eye
-      .fgColor({r: 255, g: 255, b: 255})
+      .fgColor({ r: 255, g: 255, b: 255 })
       .fillSafe(this.x(1), this.y(-2), this.x(3), this.y(0))
-      .fgColor({r: 0, g: 0, b: 0})
+      .fgColor({ r: 0, g: 0, b: 0 })
       .setPixel(this.x(2), this.y(-1));
 
     if (this._puffed) {
@@ -199,7 +211,7 @@ class PufferFish extends Movable {
         .setPixel(this.x(5), this.y(3))
         .setPixel(this.x(6), this.y(-1))
         // eye
-        .fgColor({r: 255, g: 255, b: 255})
+        .fgColor({ r: 255, g: 255, b: 255 })
         .setPixel(this.x(0), this.y(-1))
         .setPixel(this.x(4), this.y(-1))
         .setPixel(this.x(2), this.y(-3))
@@ -209,8 +221,8 @@ class PufferFish extends Movable {
 
   setColors(main) {
     this._main = main;
-    this._mainBright = mul({...main}, 1.3, 255);
-    this._mainDark = mul({...main}, 0.6, 255);
+    this._mainBright = mul({ ...main }, 1.3, 255);
+    this._mainDark = mul({ ...main }, 0.6, 255);
   }
 }
 
@@ -261,8 +273,8 @@ class SunFish extends Movable {
 
   setColors(main, fin, nose) {
     this._main = main;
-    this._mainBright = mul({...main}, 1.3, 255);
-    this._mainDark = mul({...main}, 0.6, 255);
+    this._mainBright = mul({ ...main }, 1.3, 255);
+    this._mainDark = mul({ ...main }, 0.6, 255);
     this._fin = fin;
     this._nose = nose;
   }
@@ -271,7 +283,7 @@ class SunFish extends Movable {
 class Kelp {
   constructor(anchorX, anchorY, layer, length, segments) {
     const segmentLength = length / segments;
-    this.chain = [{x: anchorX, y: anchorY, l: segmentLength}];
+    this.chain = [{ x: anchorX, y: anchorY, l: segmentLength }];
     while (segments-- > 0) {
       const last = this.chain[this.chain.length - 1];
       const current = {
@@ -281,7 +293,7 @@ class Kelp {
       };
       this.chain.push(current);
     }
-    this._color = {...KELP};
+    this._color = { ...KELP };
     this._color.g += (Math.random() - 0.5) * KELP.g * 0.1;
     this._lerpFactor = 1.0 - layer / FLOOR_LAYERS;
   }
@@ -310,20 +322,20 @@ class Bubble {
     this._lerpFactor = 1.0 - layer / FLOOR_LAYERS;
   }
   draw(matrix, water) {
-    const color = lerp({r: 0, g: 32, b: 128}, water, this._lerpFactor);
+    const color = lerp({ r: 0, g: 32, b: 128 }, water, this._lerpFactor);
     matrix.fgColor(color).drawCircle(this.x, this.y, this.r);
   }
 }
 
 function fabrikSolve(chain, goal, iterations) {
-  const anchorGoal = {...chain[0]};
+  const anchorGoal = { ...chain[0] };
   while (iterations-- > 0) {
     for (let i = chain.length - 1; i > 0; --i) {
       const c = chain[i];
       const p = chain[i - 1];
       c.x = goal.x;
       c.y = goal.y;
-      const newSegment = {x: c.x - p.x, y: c.y - p.y};
+      const newSegment = { x: c.x - p.x, y: c.y - p.y };
       vecNormalize(newSegment);
       p.x = goal.x - p.l * newSegment.x;
       p.y = goal.y - p.l * newSegment.y;
@@ -336,7 +348,7 @@ function fabrikSolve(chain, goal, iterations) {
       const p = chain[i + 1];
       c.x = goal.x;
       c.y = goal.y;
-      const newSegment = {x: c.x - p.x, y: c.y - p.y};
+      const newSegment = { x: c.x - p.x, y: c.y - p.y };
       vecNormalize(newSegment);
       p.x = goal.x - p.l * newSegment.x;
       p.y = goal.y - p.l * newSegment.y;
@@ -362,8 +374,8 @@ function spawnFish(movable, width, height) {
           g: Math.round(Math.random() * 255),
           b: Math.round(Math.random() * 255),
         },
-        lerpFactor,
-      ),
+        lerpFactor
+      )
     );
   } else if (spawn < 0.4) {
     m = new ArawanaFish();
@@ -375,7 +387,7 @@ function spawnFish(movable, width, height) {
           g: Math.round(Math.random() * 255),
           b: Math.round(Math.random() * 255),
         },
-        lerpFactor,
+        lerpFactor
       ),
       lerp(
         WATER_BASE,
@@ -384,8 +396,8 @@ function spawnFish(movable, width, height) {
           g: Math.round(Math.random() * 64),
           b: Math.round(Math.random() * 64),
         },
-        lerpFactor,
-      ),
+        lerpFactor
+      )
     );
   } else {
     m = new SunFish();
@@ -397,7 +409,7 @@ function spawnFish(movable, width, height) {
           g: Math.round(Math.random() * 255),
           b: Math.round(Math.random() * 255),
         },
-        lerpFactor,
+        lerpFactor
       ),
       lerp(
         WATER_BASE,
@@ -406,7 +418,7 @@ function spawnFish(movable, width, height) {
           g: Math.round(Math.random() * 64),
           b: Math.round(Math.random() * 64),
         },
-        lerpFactor,
+        lerpFactor
       ),
       lerp(
         WATER_BASE,
@@ -415,8 +427,8 @@ function spawnFish(movable, width, height) {
           g: Math.round(Math.random() * 255),
           b: Math.round(Math.random() * 255),
         },
-        lerpFactor,
-      ),
+        lerpFactor
+      )
     );
   }
 
@@ -438,7 +450,7 @@ function applyDirectionalAttractors(grid, attractors) {
       v.x = 0;
       for (let a of attractors) {
         if (Math.sign(x - a.x) != Math.sign(a.dx)) {
-          const attractorDirection = {x: a.x - x, y: a.y - y};
+          const attractorDirection = { x: a.x - x, y: a.y - y };
           const distance = vecLength(attractorDirection);
           if (distance !== 0) {
             attractorDirection.x /= distance;
@@ -485,8 +497,8 @@ export default function (width, height) {
           height - 1 - FLOOR_LAYERS + i,
           i,
           Math.random() * (height - 1 - FLOOR_LAYERS + i),
-          4,
-        ),
+          4
+        )
       );
     }
     kelp.push(kelpLayer);
@@ -507,16 +519,16 @@ export default function (width, height) {
           Math.random() * (width - 1),
           Math.random() * maxHeight,
           i,
-          Math.random() * 2,
-        ),
+          Math.random() * 2
+        )
       );
     }
     bubbles.push(bubbleLayer);
   }
 
   return {
-    name: 'Aquarium',
-    audio: 'aquarium.mp3',
+    name: "Aquarium",
+    audio: "aquarium.mp3",
     light: {
       bri: 254,
       hue: 40730,
@@ -535,10 +547,10 @@ export default function (width, height) {
       // move kelp & bubbles
       for (let layer = 0; layer < FLOOR_LAYERS; ++layer) {
         for (let k of kelp[layer]) {
-          const startEffector = {...k.getEffector()};
+          const startEffector = { ...k.getEffector() };
           const vec = grid.getVector(
             Math.min(width - 1, Math.max(0, startEffector.x)),
-            Math.min(height - 1, Math.max(0, startEffector.y)),
+            Math.min(height - 1, Math.max(0, startEffector.y))
           );
 
           const endEffector = {
@@ -552,7 +564,7 @@ export default function (width, height) {
         for (let b of bubbles[layer]) {
           const vec = grid.getVector(
             Math.min(width - 1, Math.max(0, b.x)),
-            Math.min(height - 1, Math.max(0, b.y)),
+            Math.min(height - 1, Math.max(0, b.y))
           );
           b.x += vec.x;
           if (b.x > width - 1 || b.x < 0) {
@@ -625,15 +637,15 @@ export default function (width, height) {
         }
       }
 
-      if (process.env.NODE_ENV !== 'production') {
-        matrix.fgColor({r: 255, g: 255, b: 255});
+      if (process.env.NODE_ENV !== "production") {
+        matrix.fgColor({ r: 255, g: 255, b: 255 });
         for (let a of attractors) {
           matrix.setPixel(
             ((a.x + 0.5) / grid.resolution.x) * matrix.width(),
-            1,
+            1
           );
         }
-        matrix.fgColor({r: 0, g: 0, b: 255});
+        matrix.fgColor({ r: 0, g: 0, b: 255 });
         for (let y = 0; y < grid.resolution.y; ++y) {
           for (let x = 0; x < grid.resolution.x; ++x) {
             const v = grid.vectors[y * grid.resolution.x + x];
@@ -645,7 +657,7 @@ export default function (width, height) {
               center.x - v.x,
               center.y - v.y,
               center.x + v.x,
-              center.y + v.y,
+              center.y + v.y
             );
           }
         }

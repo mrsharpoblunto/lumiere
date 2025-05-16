@@ -1,13 +1,13 @@
 /**
  * @format
  */
-import * as hap from 'hap-nodejs';
-import * as config from './config.mjs';
+import * as hap from "hap-nodejs";
+import * as config from "./config.mjs";
 
 export default function (vizController) {
-  const accessoryUUID = hap.uuid.generate('hap-nodejs:accessories:fyreplace');
+  const accessoryUUID = hap.uuid.generate("hap-nodejs:accessories:fyreplace");
 
-  const light = new hap.Accessory('Fyreplace', accessoryUUID);
+  const light = new hap.Accessory("Fyreplace", accessoryUUID);
 
   light
     .getService(hap.Service.AccessoryInformation)
@@ -21,7 +21,7 @@ export default function (vizController) {
   });
 
   light
-    .addService(hap.Service.Lightbulb, 'Lumiere')
+    .addService(hap.Service.Lightbulb, "Lumiere")
     .getCharacteristic(hap.Characteristic.On)
     .on(hap.CharacteristicEventTypes.SET, function (value, cb) {
       try {
@@ -35,7 +35,7 @@ export default function (vizController) {
       cb(vizController.getState().on);
     });
 
-  vizController.on('change', function ({state, source}) {
+  vizController.on("change", function ({ state, source }) {
     if (source !== config.HOMEKIT_USER) {
       light
         .getService(hap.Service.Lightbulb)

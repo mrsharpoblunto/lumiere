@@ -4,11 +4,11 @@
 
 export class CanvasMatrix {
   constructor(width, height, canvas) {
-    this._ctx = canvas.getContext('2d', { alpha: false });
+    this._ctx = canvas.getContext("2d", { alpha: false });
     this._width = width;
     this._height = height;
-    this._bgColor = {r:0,g:0,b:0};
-    this.fgColor({r:0,g:0,b:0});
+    this._bgColor = { r: 0, g: 0, b: 0 };
+    this.fgColor({ r: 0, g: 0, b: 0 });
     this._brightness = 255;
     this._afterSync = null;
     this._image = this._ctx.createImageData(width, height);
@@ -34,7 +34,7 @@ export class CanvasMatrix {
   }
 
   brightness(brightness) {
-    if (typeof(brightness) === 'undefined') {
+    if (typeof brightness === "undefined") {
       return this.brightness;
     } else {
       this._brightness = brightness;
@@ -49,7 +49,7 @@ export class CanvasMatrix {
     for (let y = 0; y < copyHeight; y++) {
       for (let x = 0; x < copyWidth; x++) {
         const srcIndex = (y * w + x) * 3;
-        const destIndex = this._getIndex(x,y);
+        const destIndex = this._getIndex(x, y);
         this._buffer[destIndex] = buffer[srcIndex];
         this._buffer[destIndex + 1] = buffer[srcIndex + 1];
         this._buffer[destIndex + 2] = buffer[srcIndex + 2];
@@ -212,9 +212,9 @@ export class CanvasMatrix {
     }
     const index = this._getIndex(x, y);
     this._buffer[index] = color.r;
-    this._buffer[index+1] = color.g;
-    this._buffer[index+2] = color.b;
-    this._buffer[index+3] = 255;
+    this._buffer[index + 1] = color.g;
+    this._buffer[index + 2] = color.b;
+    this._buffer[index + 3] = 255;
     return this;
   }
 
@@ -230,7 +230,7 @@ export class CanvasMatrix {
   sync() {
     this._ctx.putImageData(this._image, 0, 0);
     if (this._afterSync) {
-      this._afterSync(this,16, Date.now()); 
+      this._afterSync(this, 16, Date.now());
     }
   }
 
@@ -243,23 +243,22 @@ export class CanvasMatrix {
   }
 
   drawText(text, x, y, kerning) {
-    throw new Exception('Not implemented');
+    throw new Exception("Not implemented");
   }
 
   font(font) {
-    throw new Exception('Not implemented');
+    throw new Exception("Not implemented");
   }
 
   font() {
-    throw new Exception('Not implemented');
+    throw new Exception("Not implemented");
   }
 
   luminanceCorrect(correct) {
-    throw new Exception('Not implemented');
+    throw new Exception("Not implemented");
   }
 
   pwmBits(pwmBits) {
-    throw new Exception('Not implemented');
+    throw new Exception("Not implemented");
   }
-
 }
