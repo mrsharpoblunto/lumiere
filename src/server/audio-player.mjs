@@ -25,7 +25,7 @@ export class AudioPlayer {
   play(file) {
     this.stop();
     this._currentFile = file;
-    this._playFile(file, volume);
+    this._playFile(file);
   }
   
   queue(file) {
@@ -69,6 +69,7 @@ export class AudioPlayer {
   }
 
   stop() {
+    this._queuedFile = null;
     this._shouldRequeue = false;
     if (this._current) {
       kill(this._current.pid);
