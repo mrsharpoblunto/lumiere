@@ -213,7 +213,7 @@ export default function (width, height) {
       // update clouds
       for (let i = 0; i < clouds.length; ++i) {
         const cloud = clouds[i];
-        if (cloud.cloud) {
+        if (cloud.cloud>=0) {
           cloud.x += cloud.vx;
           if (cloud.x > width) {
             clouds.splice(i, 1);
