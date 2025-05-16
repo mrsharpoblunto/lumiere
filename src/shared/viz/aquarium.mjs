@@ -516,14 +516,14 @@ export default function (width, height) {
 
   return {
     name: 'Aquarium',
-    audio: 'audio/aquarium.mp3',
+    audio: 'aquarium.mp3',
     light: {
       bri: 254,
       hue: 40730,
       sat: 247,
     },
     volume: 18,
-    run: (matrix, dt, t) => {
+    run: (matrix, audio, dt, t) => {
       for (let a of attractors) {
         a.x += a.dx;
         if (a.x > grid.resolution.x + 2 || a.x < -3) {

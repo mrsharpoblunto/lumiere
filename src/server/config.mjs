@@ -39,7 +39,7 @@ export const HOMEKIT_USER = 'HomeKit user';
 
 export const VOLUME_COMMAND = 'amixer set PCM';
 export const AUDIO_COMMAND = 'omxplayer';
-export const AUDIO_ARGS = ['-o', 'alsa:hw:1,0', '--loop'];
+export const AUDIO_ARGS = ['-o', 'alsa:hw:1,0'];
 
 export const SSL_KEY =
   path.join(__dirname,'../../ssl/server.key');

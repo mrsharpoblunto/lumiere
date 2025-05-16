@@ -81,14 +81,14 @@ export default function (width, height) {
 
   return {
     name: 'Fire',
-    audio: 'audio/fire.mp3',
+    audio: 'fire.mp3',
     light: {
       bri: 254,
       hue: 65440,
       sat: 202,
     },
     volume: 30,
-    run: (matrix, dt, t) => {
+    run: (matrix, audio, dt, t) => {
       matrix.brightness(100).clear();
 
       // cycle the attractor back and forth

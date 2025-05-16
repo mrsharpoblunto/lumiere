@@ -5,6 +5,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import visualizations from '../shared/viz/index.mjs';
 import {CanvasMatrix} from './canvas-matrix';
+import {BrowserAudio, NullAudio} from './browser-audio';
 import {MATRIX_WIDTH, MATRIX_HEIGHT} from '../shared/config.mjs';
 import {patchMatrix} from '../shared/viz/helpers.mjs';
 
@@ -168,13 +169,18 @@ function Visualization(props) {
     const matrix = patchMatrix(
       new CanvasMatrix(MATRIX_WIDTH, MATRIX_HEIGHT, canvasEl.current),
     );
+    const audio = props.audio ? new BrowserAudio(document) : new NullAudio();
+    audio.volume(props.viz.volume);
+    if (props.viz.audio) {
+      audio.play(props.viz.audio, props.viz.volume);
+    }
 
     let cleanup = false;
     let pending = null;
 
     matrix.afterSync((m, dt, t) => {
       if (!cleanup) {
-        props.viz.run(m, dt, t);
+        props.viz.run(m, audio, dt, t);
         pending = window.requestAnimationFrame(() => {
           pending = null;
           m.sync();
@@ -234,6 +240,7 @@ function App() {
       return (
         <Visualization
           viz={viz}
+          audio={true}
           style={{width: '100%', height: '100%', maxWidth: 'calc(100vh * 2)', maxHeight: 'calc(100vw / 2)', AspectRatio: '2/1'}}
         />
       );

@@ -158,14 +158,13 @@ export default function (width, height) {
 
   return {
     name: 'Bonsai',
-    audio: 'audio/bonsai.mp3',
     light: {
       bri: 204,
       hue: 35680,
       sat: 133,
     },
     volume: 12,
-    run: (matrix, _dt, _t) => {
+    run: (matrix, audio, _dt, _t) => {
       let now = new Date();
       if (!prevDate || now.getDay() !== prevDate.getDay()) {
         const times = SunCalc.getTimes(new Date(),LATITUDE, LONGITUDE);
@@ -188,26 +187,38 @@ export default function (width, height) {
         palette1 = nightPalette;
         palette2 = sunxPalette;
         paletteLerp = (now - sunRiseStart) / (sunRisePeak - sunRiseStart);
+        audio.queue('bonsai.mp3');
       } else if (now > sunRisePeak && now < sunRiseEnd) {
         // sunrise -> day
         palette1 = sunxPalette;
         palette2 = dayPalette;
         paletteLerp = (now - sunRisePeak) / (sunRiseEnd - sunRisePeak);
+        audio.queue('bonsai.mp3');
       } else if (now > sunRiseEnd && now < sunSetStart) {
+        audio.queue('bonsai.mp3');
         // day
       } else if (now >= sunSetStart && now <= sunSetPeak) {
         // day -> sunset
         palette1 = dayPalette;
         palette2 = sunxPalette;
         paletteLerp = (now - sunSetStart) / (sunSetPeak - sunSetStart);
+        audio.queue('bonsai-night.mp3');
       } else if (now > sunSetPeak && now < sunSetEnd) {
         // sunset -> night
         palette1 = sunxPalette;
         palette2 = nightPalette;
         paletteLerp = (now - sunSetPeak) / (sunSetEnd - sunSetPeak);
+        audio.queue('bonsai-night.mp3');
       } else {
         // night
         palette1 = palette2 = nightPalette;
+        const interval = 86400*1000 - (sunSetEnd - sunRiseStart);
+        if (now < sunSetEnd) {
+          paletteLerp = (now + (86400*1000 - sunSetEnd)) / interval;
+        } else {
+          paletteLerp = (now - sunSetEnd) / interval;
+        }
+        audio.queue('bonsai-night.mp3');
       }
 
       // update clouds
@@ -379,12 +390,7 @@ export default function (width, height) {
 
       // draw the moon
       if (palette1 === nightPalette && palette2 === nightPalette) {
-        let n = now;
-        if (n < sunSetEnd) {
-          n += 24*60*60*1000;
-        }
-        let moonY = (n - sunSetEnd) / (24*60*60*1000 - (sunSetEnd - sunRiseStart));
-        drawAsset(matrix, cx + 5 + Math.pow(moonY * 3,2)*cx, height - (height * moonY * 3), moon);
+        drawAsset(matrix, cx + 5 + Math.pow(paletteLerp * 3,2)*cx, height - (height * paletteLerp * 3), moon);
       }
 
       // draw clouds

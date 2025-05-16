@@ -66,7 +66,7 @@ export class VizController extends EventEmitter {
   _afterSync(_matrix, dt, t) {
     const viz = this.visualizations[this.state.visualization];
     try {
-      viz.run(this.matrix, dt, t);
+      viz.run(this.matrix, this.audioPlayer, dt, t);
     } catch (ex) {
       console.error(ex.stack);
     }
@@ -95,8 +95,11 @@ export class VizController extends EventEmitter {
     } else {
       this.matrix.afterSync(this._afterSync.bind(this));
       const viz = this.visualizations[this.state.visualization];
-      viz.run(this.matrix, 0, 0);
-      this.audioPlayer.play(viz.audio, viz.volume);
+      viz.run(this.matrix, this.audioPlayer, 0, 0);
+      this.audioPlayer.volume(viz.volume);
+      if (this.viz.audio) {
+        this.audioPlayer.play(viz.audio, viz.volume);
+      }
       this.matrix.sync();
     }
   }
