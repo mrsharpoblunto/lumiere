@@ -98,7 +98,7 @@ export class VizController extends EventEmitter {
       viz.run(this.matrix, this.audioPlayer, 0, 0);
       this.audioPlayer.volume(viz.volume);
       if (this.viz.audio) {
-        this.audioPlayer.play(viz.audio, viz.volume);
+        this.audioPlayer.play(viz.audio);
       }
       this.matrix.sync();
     }
