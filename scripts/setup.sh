@@ -5,7 +5,17 @@ if [ "$(whoami)" != "root" ]; then
 fi
 
 # install dependencies
-apt-get install openssl libavahi-compat-libdnssd-dev nodejs npm omxplayer
+apt-get install openssl libavahi-compat-libdnssd-dev curl unzip
+
+# install fnm
+curl -fsSL https://fnm.vercel.app/install | bash
+FNM_PATH="/home/pi/.local/share/fnm"
+if [ -d "$FNM_PATH" ]; then
+  export PATH="$FNM_PATH:$PATH"
+  eval "`fnm env`"
+fi
+
+fnm i v24.0.2
 
 # build the app & web client
 npm install
