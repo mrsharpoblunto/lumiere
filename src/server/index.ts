@@ -5,10 +5,12 @@ import https from "https";
 import fs from "fs";
 import storage from "node-persist";
 import * as hap from "hap-nodejs";
-import uuid from "node-uuid";
+import {v4} from "uuid";
+import lightAccessory from "./light-accessory.ts";
 
 import express from "express";
-import { Express, Request, Response } from "express";
+import { type Express, type Request, type Response } from "express";
+
 //express middleware
 import morgan from "morgan";
 import compression from "compression";
@@ -61,7 +63,7 @@ app.use(
   })
 );
 
-app.use(cookieParser(uuid.v4()));
+app.use(cookieParser(v4()));
 app.use(bodyParser.json());
 if (process.env.NODE_ENV !== "production") {
   app.use(errorHandler());
@@ -103,16 +105,13 @@ function configureRoutes(
 ) {
   app.use(
     express.static(
-      path.join(__dirname, "../../dist"),
+      path.join(__dirname, "../../dist-client"),
       config.PUBLIC_STATIC_CACHING
     )
   );
-
-  /**
-   * handle rendering of the UI
-   */
-  app.get("/*", (_req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, "../../dist", "index.html"));
+  // serve the web UI
+  app.get("/*path", (_req: Request, res: Response) => {
+    res.sendFile(path.join(__dirname, "../../dist-client", "index.html"));
   });
 }
 
@@ -124,8 +123,7 @@ async function startHomekitServer(
     return;
   }
 
-  const i = await import("./light-accessory.js");
-  const accessory = i.default(app.vizController);
+  const accessory = lightAccessory(app.vizController);
   accessory.publish({
     port: config.HOMEKIT_PORT,
     username: config.HOMEKIT_USERNAME,

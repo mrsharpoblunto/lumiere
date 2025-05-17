@@ -4,7 +4,7 @@
 import { AUDIO_COMMAND, VOLUME_COMMAND, AUDIO_ARGS } from "./config.ts";
 import { spawn, exec, ChildProcess } from "child_process";
 import kill from "tree-kill";
-import { IAudioPlayer } from "../shared/audio-player-type.ts";
+import { type IAudioPlayer } from "../shared/audio-player-type.ts";
 
 export class AudioPlayer implements IAudioPlayer {
   private _current: ChildProcess | null;

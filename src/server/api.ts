@@ -1,11 +1,11 @@
 /*
  * @format
  */
-import { Express, Request, Response } from "express";
+import { type Express, type Request, type Response } from "express";
 import * as winston from "winston";
 import storage from "node-persist";
-import * as config from "./config.js";
-import { VizController } from "./viz-controller.js";
+import * as config from "./config.ts";
+import { VizController } from "./viz-controller.ts";
 
 type AppWithExtensions = Express & {
   logger?: winston.Logger;

@@ -1,10 +1,10 @@
 import EventEmitter from "events";
 import * as M from "rpi-led-matrix";
-import * as config from "./config.js";
-import visualizations from "../shared/viz/index.js";
-import { IVisualization } from "../shared/viz/visualization-type.js";
-import { MATRIX_WIDTH, MATRIX_HEIGHT } from "../shared/config.js";
-import { AudioPlayer } from "./audio-player.js";
+import * as config from "./config.ts";
+import visualizations from "../shared/viz/index.ts";
+import { type IVisualization } from "../shared/viz/visualization-type.ts";
+import { MATRIX_WIDTH, MATRIX_HEIGHT } from "../shared/config.ts";
+import { AudioPlayer } from "./audio-player.ts";
 
 interface VizState {
   visualization: number;
@@ -99,7 +99,7 @@ export class VizController extends EventEmitter {
           console.error(ex.stack);
         }
       }
-    }, 16 - dt);
+    }, Math.max(16 - dt, 0));
   }
 
   _updateViz(): void {
@@ -116,11 +116,13 @@ export class VizController extends EventEmitter {
     } else {
       this.matrix.afterSync(this._afterSync.bind(this));
       const viz = this.visualizations[this.state.visualization];
-      viz.run(this.matrix, this.audioPlayer, 0, 0);
       this.audioPlayer.volume(viz.volume);
       if (viz.audio) {
         this.audioPlayer.play(viz.audio);
+      } else {
+	this.audioPlayer.stop();
       }
+      viz.run(this.matrix, this.audioPlayer, 0, 0);
       this.matrix.sync();
     }
   }

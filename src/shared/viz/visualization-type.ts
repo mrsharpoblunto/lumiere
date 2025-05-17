@@ -1,5 +1,5 @@
-import { IAudioPlayer } from "../audio-player-type.ts";
-import { LedMatrixInstance } from "rpi-led-matrix";
+import { type IAudioPlayer } from "../audio-player-type.ts";
+import { type LedMatrixInstance } from "rpi-led-matrix";
 export type { Color, LedMatrixInstance } from "rpi-led-matrix";
 
 export interface IVisualization {

@@ -1,6 +1,3 @@
-/**
- * @format
- */
 import * as hap from "hap-nodejs";
 import * as config from "./config.ts";
 import { VizController } from "./viz-controller.ts";

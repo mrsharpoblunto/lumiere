@@ -1,11 +1,11 @@
-import { Vec2, lerp, mul, vecLength, vecNormalize } from "./helpers.ts";
+import { type Vec2, lerp, mul, vecLength, vecNormalize } from "./helpers.ts";
 import {
-  IVisualization,
-  Color,
-  LedMatrixInstance,
+  type IVisualization,
+  type Color,
+  type LedMatrixInstance,
 } from "./visualization-type.ts";
 import { FlowGrid } from "./flow-grid.ts";
-import { IAudioPlayer } from "../audio-player-type.ts";
+import { type IAudioPlayer } from "../audio-player-type.ts";
 
 const FLOOR_LAYERS = 8;
 const SAND_BASE = { r: 128, g: 128, b: 64 };

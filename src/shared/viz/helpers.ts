@@ -1,4 +1,4 @@
-import { Color, LedMatrixInstance } from "./visualization-type.ts";
+import { type Color, type LedMatrixInstance } from "./visualization-type.ts";
 
 export type Vec2 = {
   x: number;

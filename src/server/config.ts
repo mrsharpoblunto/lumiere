@@ -1,6 +1,6 @@
 import { fileURLToPath } from "url";
 import path from "path";
-import { Response } from "express";
+import { type Response } from "express";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,7 +37,7 @@ export const HOMEKIT_USER = "HomeKit user";
 
 export const VOLUME_COMMAND = "amixer set Master";
 export const AUDIO_COMMAND = "mpg123";
-export const AUDIO_ARGS = [];
+export const AUDIO_ARGS = ["-q"];
 
 export const SSL_KEY = path.join(__dirname, "../../ssl/server.key");
 export const SSL_CERT = path.join(__dirname, "../../ssl/server.crt");

@@ -15,7 +15,9 @@ if [ -d "$FNM_PATH" ]; then
   eval "`fnm env`"
 fi
 
+# install node & set caps
 fnm i v24.0.2
+setcap 'cap_sys_nice=eip' $(which node)
 
 # build the app & web client
 npm install
