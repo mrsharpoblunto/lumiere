@@ -35,9 +35,9 @@ export const VIZ_KEY = "viz_state";
 export const WEB_USER = "web user";
 export const HOMEKIT_USER = "HomeKit user";
 
-export const VOLUME_COMMAND = "amixer set PCM";
-export const AUDIO_COMMAND = "omxplayer";
-export const AUDIO_ARGS = ["-o", "alsa:hw:1,0"];
+export const VOLUME_COMMAND = "amixer set Master";
+export const AUDIO_COMMAND = "mpg123";
+export const AUDIO_ARGS = [];
 
 export const SSL_KEY = path.join(__dirname, "../../ssl/server.key");
 export const SSL_CERT = path.join(__dirname, "../../ssl/server.crt");

@@ -5,7 +5,7 @@ if [ "$(whoami)" != "root" ]; then
 fi
 
 # install dependencies
-apt-get install openssl libavahi-compat-libdnssd-dev curl unzip
+apt-get install openssl libavahi-compat-libdnssd-dev curl unzip mpg123
 
 # install fnm
 curl -fsSL https://fnm.vercel.app/install | bash
