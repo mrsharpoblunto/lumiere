@@ -2,6 +2,7 @@ import EventEmitter from "events";
 import { spawn, ChildProcess } from "child_process";
 import * as readline from "readline";
 import path from "path";
+import { fileURLToPath } from "url";
 import { AudioPlayer } from "./audio-player.ts";
 
 interface VizState {
@@ -14,11 +15,13 @@ interface VizChangeEvent {
   source: string;
 }
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 export class VizController extends EventEmitter {
   childProcess: ChildProcess | null;
   audioPlayer: AudioPlayer;
   state: VizState;
-  rl: readline.Interface | null;
   identifying: boolean;
 
   constructor(initialState: VizState) {
@@ -27,7 +30,6 @@ export class VizController extends EventEmitter {
     this.childProcess = null;
     this.audioPlayer = new AudioPlayer();
     this.state = initialState;
-    this.rl = null;
     this.identifying = false;
 
     this._startChildProcess();
@@ -36,18 +38,15 @@ export class VizController extends EventEmitter {
   private _startChildProcess(): void {
     const rendererPath = path.resolve(__dirname, "matrix-renderer.ts");
 
-    this.childProcess = spawn("sudo", [process.execPath, rendererPath], {
-      stdio: ["pipe", "pipe", "pipe"],
-    });
+    this.childProcess = spawn("sudo", ["-E", process.execPath, rendererPath], { env: {...process.env } });
 
-    if (this.childProcess.stdout) {
-      this.rl = readline.createInterface({
-        input: this.childProcess.stdout,
-        terminal: false,
-      });
-
-      this.rl.on("line", (line) => {
+      this.childProcess.stdout?.on('data', (data) => {
         try {
+	  const messages = data.toString().split("\n");
+	  for (const line of messages) {
+	if (!line.length) {
+		continue;
+	}
           const message = JSON.parse(line);
           switch (message.type) {
             case "audio-volume":
@@ -73,11 +72,11 @@ export class VizController extends EventEmitter {
             default:
               console.error(`Unknown message type: ${message.type}`);
           }
+	  }
         } catch (err) {
           console.error("Error parsing message from render process:", err);
         }
       });
-    }
 
     this.childProcess.stderr?.on("data", (data) => {
       console.error(`Render process error: ${data}`);
@@ -85,18 +84,17 @@ export class VizController extends EventEmitter {
 
     this.childProcess.on("close", (code) => {
       console.log(`Render process exited with code ${code}`);
-      if (this.rl) {
-        this.rl.close();
-        this.rl = null;
-      }
-
       this.childProcess = null;
-
       if (code !== 0) {
         console.log("Restarting render process...");
         setTimeout(() => this._startChildProcess(), 1000);
       }
     });
+
+      this._sendToChild({
+        type: "set-state",
+        state: this.state,
+      });
   }
 
   private _sendToChild(message: any): void {

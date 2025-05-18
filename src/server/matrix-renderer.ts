@@ -73,14 +73,9 @@ class MatrixRenderer {
 
         switch (message.type) {
           case 'set-state':
-            if (
-              message.index >= 0 &&
-              message.index < this.visualizations.length &&
-              this.state.visualization !== message.index
-            ) {
-              this.state.visualization = message.index;
-              this._updateViz();
-            }
+	const prevState = this.state;
+	    this.state = message.state;
+            this._updateViz(prevState);
             break;
 
           case 'identify':
@@ -95,7 +90,7 @@ class MatrixRenderer {
       }
     });
 
-    this._updateViz();
+    this._updateViz(null);
   }
 
   sendToParent(message: any): void {
@@ -134,10 +129,10 @@ class MatrixRenderer {
     flash();
   }
 
-  _afterSync(_matrix: any, dt: number, t: number): void {
+  _afterSync(_matrix: any, dt: number, _t: number): void {
     const viz = this.visualizations[this.state.visualization];
     try {
-      viz.run(this.matrix, this.audioPlayer, dt, t);
+      viz.run(this.matrix, this.audioPlayer, dt, (new Date()).getTime());
     } catch (ex: any) {
       console.error(ex.stack);
     }
@@ -152,19 +147,19 @@ class MatrixRenderer {
     }, Math.max(16 - dt, 0));
   }
 
-  _updateViz(): void {
+  _updateViz(prevState: VizState | null): void {
+    if (!this.state.on) {
     if (this.activeTimeout) {
       clearTimeout(this.activeTimeout as NodeJS.Timeout);
       this.activeTimeout = 0;
     }
-    if (!this.state.on) {
+      this.audioPlayer.stop();
       this.matrix
         .afterSync(() => { })
         .clear()
         .sync();
-      this.audioPlayer.stop();
-    } else {
-      this.matrix.afterSync(this._afterSync.bind(this));
+    } else if (this.state.on) {
+if (!prevState || (prevState?.visualization !== this.state.visualization)) {
       const viz = this.visualizations[this.state.visualization];
       this.audioPlayer.volume(viz.volume);
       if (viz.audio) {
@@ -172,8 +167,11 @@ class MatrixRenderer {
       } else {
         this.audioPlayer.stop();
       }
-      viz.run(this.matrix, this.audioPlayer, 0, 0);
-      this.matrix.sync();
+}
+
+      if (!prevState?.on) {
+        this.matrix.afterSync(this._afterSync.bind(this)).clear().sync();
+      }
     }
   }
 }

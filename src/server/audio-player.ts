@@ -3,7 +3,6 @@
  */
 import { AUDIO_COMMAND, VOLUME_COMMAND, AUDIO_ARGS } from "./config.ts";
 import { spawn, exec, ChildProcess } from "child_process";
-import kill from "tree-kill";
 import { type IAudioPlayer } from "../shared/audio-player-type.ts";
 
 export class AudioPlayer implements IAudioPlayer {
@@ -16,7 +15,6 @@ export class AudioPlayer implements IAudioPlayer {
     this._current = null;
     this._currentFile = null;
     this._queuedFile = null;
-    this._shouldRequeue = true;
   }
 
   volume(volume: number): void {
@@ -29,61 +27,58 @@ export class AudioPlayer implements IAudioPlayer {
   }
 
   play(file: string): void {
-    this.stop();
-    this._currentFile = file;
-    this._playFile(file);
+    this._queuedFile = file;
+    if (this._current) {
+      this._current.kill();
+      this._current = null;
+    } else {
+      this._playFile();
+    }
   }
 
   queue(file: string): void {
     this._queuedFile = file;
     if (!this._current) {
-      this._playQueuedFile();
+      this._playFile();
     }
   }
 
-  private _playQueuedFile(): void {
+  stop(): void {
+    this._queuedFile = null;
+    this._currentFile = null
+    if (this._current) {
+     	this._current.kill();
+	    this._current = null;
+    }
+  }
+
+  private _playFile(): void {
     if (this._queuedFile) {
       this._currentFile = this._queuedFile;
       this._queuedFile = null;
     }
-    if (this._currentFile) {
-      this._playFile(this._currentFile);
+
+    if (!this._currentFile) {
+	    return;
     }
-  }
 
-  private _playFile(file: string): void {
-    this._shouldRequeue = true;
-    this._current = spawn(AUDIO_COMMAND, [...AUDIO_ARGS, `audio/${file}`]);
-
+    this._current = spawn(AUDIO_COMMAND, [...AUDIO_ARGS, `audio/${this._currentFile}`]);
     this._current.stdout?.on("data", (data) => {
       console.log(`audio stdout:\n${data}`);
     });
-
     this._current.stderr?.on("data", (data) => {
       console.error(`audio stderr: ${data}`);
     });
-
     this._current.on("error", (err) => {
       console.log(`audio error: ${err.message}`);
     });
-
     this._current.on("close", (code) => {
       if (code !== 0) {
         console.log(`audio player exited with code ${code}`);
       }
       this._current = null;
-      if (this._shouldRequeue) {
-        this._playQueuedFile();
-      }
+      this._playFile();
     });
   }
 
-  stop(): void {
-    this._queuedFile = null;
-    this._shouldRequeue = false;
-    if (this._current && this._current.pid) {
-      kill(this._current.pid);
-    }
-    this._current = null;
-  }
 }

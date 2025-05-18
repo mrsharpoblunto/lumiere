@@ -127,7 +127,7 @@ export function configureApiRoutes(app: AppWithExtensions): void {
         JSON.stringify(app.vizController.getState())
       );
       app.logger?.info(
-        "Set viz to " + app.vizController.visualizations[visualization].name
+        "Set viz to " + visualization
       );
       res.json({
         success: true,

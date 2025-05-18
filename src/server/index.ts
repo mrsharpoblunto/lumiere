@@ -84,12 +84,6 @@ app.storage = storage;
     vizState = { visualization: 0, on: false };
   }
   app.vizController = new VizController(vizState);
-  app.logger?.info(
-    "Loaded visualizations: [" +
-      app.vizController.visualizations.map((v) => v.name).join(", ") +
-      "]"
-  );
-
   configureApiRoutes(app);
   configureRoutes(app);
   await startServer(app);

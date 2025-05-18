@@ -37,7 +37,6 @@
     "node-persist": "^3.1.0",
     "rpi-led-matrix": "^1.11.1",
     "suncalc": "^1.9.0",
-    "tree-kill": "^1.2.2",
     "uuid": "^11.1.0",
     "winston": "^3.3.3"
   },

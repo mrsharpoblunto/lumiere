@@ -18,6 +18,7 @@ fi
 # install node & set caps
 fnm i v24.0.2
 setcap 'cap_sys_nice=eip' $(which node)
+setcap 'cap_net_bind_service=+ep' $(which node)
 
 # build the app & web client
 npm install
