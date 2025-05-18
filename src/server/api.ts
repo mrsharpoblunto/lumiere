@@ -118,7 +118,7 @@ export function configureApiRoutes(app: AppWithExtensions): void {
         throw new Error("VizController or storage not initialized");
       }
       
-      const { visualization } = await app.vizController.setVisualization(
+      const { visualization } = app.vizController.setVisualization(
         parseInt(req.body.visualization, 10),
         config.WEB_USER
       );

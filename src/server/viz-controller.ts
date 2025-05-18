@@ -1,9 +1,7 @@
 import EventEmitter from "events";
-import * as M from "rpi-led-matrix";
-import * as config from "./config.ts";
-import visualizations from "../shared/viz/index.ts";
-import { type IVisualization } from "../shared/viz/visualization-type.ts";
-import { MATRIX_WIDTH, MATRIX_HEIGHT } from "../shared/config.ts";
+import { spawn, ChildProcess } from "child_process";
+import * as readline from "readline";
+import path from "path";
 import { AudioPlayer } from "./audio-player.ts";
 
 interface VizState {
@@ -17,120 +15,103 @@ interface VizChangeEvent {
 }
 
 export class VizController extends EventEmitter {
-  matrix: any;
+  childProcess: ChildProcess | null;
   audioPlayer: AudioPlayer;
   state: VizState;
-  activeTimeout: NodeJS.Timeout | number;
+  rl: readline.Interface | null;
   identifying: boolean;
-  visualizations: IVisualization[];
 
-  constructor(state: VizState) {
+  constructor(initialState: VizState) {
     super();
 
-    this.matrix =
-      new M.LedMatrix(
-        {
-          ...M.LedMatrix.defaultMatrixOptions(),
-          rows: MATRIX_HEIGHT,
-          cols: MATRIX_WIDTH,
-          hardwareMapping: M.GpioMapping.AdafruitHatPwm,
-          disableHardwarePulsing: process.env.NODE_ENV !== "production",
-        },
-        {
-          ...M.LedMatrix.defaultRuntimeOptions(),
-          dropPrivileges: 0,
-          gpioSlowdown: 3,
-        }
-      );
-
+    this.childProcess = null;
     this.audioPlayer = new AudioPlayer();
-
-    this.state = state;
-    this.activeTimeout = 0;
+    this.state = initialState;
+    this.rl = null;
     this.identifying = false;
-    this.visualizations = visualizations(
-      this.matrix.width(),
-      this.matrix.height()
-    );
-    this._updateViz();
+
+    this._startChildProcess();
+  }
+
+  private _startChildProcess(): void {
+    const rendererPath = path.resolve(__dirname, "matrix-renderer.ts");
+
+    this.childProcess = spawn("sudo", [process.execPath, rendererPath], {
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+
+    if (this.childProcess.stdout) {
+      this.rl = readline.createInterface({
+        input: this.childProcess.stdout,
+        terminal: false,
+      });
+
+      this.rl.on("line", (line) => {
+        try {
+          const message = JSON.parse(line);
+          switch (message.type) {
+            case "audio-volume":
+              this.audioPlayer.volume(message.volume);
+              break;
+
+            case "audio-play":
+              this.audioPlayer.play(message.file);
+              break;
+
+            case "audio-queue":
+              this.audioPlayer.queue(message.file);
+              break;
+
+            case "audio-stop":
+              this.audioPlayer.stop();
+              break;
+
+            case "identify-complete":
+              this.identifying = false;
+              break;
+
+            default:
+              console.error(`Unknown message type: ${message.type}`);
+          }
+        } catch (err) {
+          console.error("Error parsing message from render process:", err);
+        }
+      });
+    }
+
+    this.childProcess.stderr?.on("data", (data) => {
+      console.error(`Render process error: ${data}`);
+    });
+
+    this.childProcess.on("close", (code) => {
+      console.log(`Render process exited with code ${code}`);
+      if (this.rl) {
+        this.rl.close();
+        this.rl = null;
+      }
+
+      this.childProcess = null;
+
+      if (code !== 0) {
+        console.log("Restarting render process...");
+        setTimeout(() => this._startChildProcess(), 1000);
+      }
+    });
+  }
+
+  private _sendToChild(message: any): void {
+    this.childProcess?.stdin?.write(JSON.stringify(message) + "\n");
   }
 
   identify(): void {
-    const wasOn = this.state.on;
-    if (wasOn) {
-      this.setOn(false, config.WEB_USER);
-    }
     this.identifying = true;
-
-    let count = 10;
-    let status = 1;
-    const flash = () => {
-      if (count >= 0) {
-        this.matrix
-          .clear()
-          .fgColor(status ? { r: 0, g: 0, b: 0 } : { r: 0, g: 0, b: 0 })
-          .fill(0, 0, this.matrix.width() - 1, this.matrix.height() - 1);
-        --count;
-        status = status ? 0 : 1;
-        setTimeout(() => this.matrix.sync(), 100);
-      } else {
-        this.identifying = false;
-        if (wasOn) {
-          this.setOn(true, config.WEB_USER);
-        }
-      }
-    };
-    this.matrix.afterSync(flash);
-    flash();
-  }
-
-  _afterSync(_matrix: any, dt: number, t: number): void {
-    const viz = this.visualizations[this.state.visualization];
-    try {
-      viz.run(this.matrix, this.audioPlayer, dt, t);
-    } catch (ex: any) {
-      console.error(ex.stack);
-    }
-    this.activeTimeout = setTimeout(() => {
-      if (this.state.on) {
-        try {
-          this.matrix.sync();
-        } catch (ex: any) {
-          console.error(ex.stack);
-        }
-      }
-    }, Math.max(16 - dt, 0));
-  }
-
-  _updateViz(): void {
-    if (this.activeTimeout) {
-      clearTimeout(this.activeTimeout as NodeJS.Timeout);
-      this.activeTimeout = 0;
-    }
-    if (!this.state.on) {
-      this.matrix
-        .afterSync(() => {})
-        .clear()
-        .sync();
-      this.audioPlayer.stop();
-    } else {
-      this.matrix.afterSync(this._afterSync.bind(this));
-      const viz = this.visualizations[this.state.visualization];
-      this.audioPlayer.volume(viz.volume);
-      if (viz.audio) {
-        this.audioPlayer.play(viz.audio);
-      } else {
-	this.audioPlayer.stop();
-      }
-      viz.run(this.matrix, this.audioPlayer, 0, 0);
-      this.matrix.sync();
-    }
+    this._sendToChild({ type: "identify" });
   }
 
   toggleOn(source: string): VizState {
     if (!this.identifying) {
       this.state.on = !this.state.on;
-      this._updateViz();
+      this._sendToChild({ type: "set-state", state: this.state });
       this.emit("change", { state: this.state, source } as VizChangeEvent);
     }
     return this.state;
@@ -139,25 +120,23 @@ export class VizController extends EventEmitter {
   setOn(on: boolean, source: string): VizState {
     if (!this.identifying && on !== this.state.on) {
       this.state.on = on;
-      this._updateViz();
+      this._sendToChild({
+        type: "set-state",
+        state: this.state,
+      });
       this.emit("change", { state: this.state, source } as VizChangeEvent);
     }
     return this.state;
   }
 
-  setVisualization(viz: number, source: string): Promise<VizState> {
-    return new Promise((resolve) => {
-      if (
-        viz >= 0 &&
-        viz < this.visualizations.length &&
-        this.state.visualization !== viz
-      ) {
-        this.state.visualization = viz;
-        this._updateViz();
-        this.emit("change", { state: this.state, source } as VizChangeEvent);
-      }
-      resolve(this.state);
+  setVisualization(viz: number, source: string): VizState {
+    this.state.visualization = viz;
+    this._sendToChild({
+      type: "set-state",
+      state: this.state,
     });
+    this.emit("change", { state: this.state, source } as VizChangeEvent);
+    return this.state;
   }
 
   getState(): VizState {
