@@ -11,19 +11,15 @@ export class BrowserAudio implements IAudioPlayer {
   private _audioElement: HTMLAudioElement;
   private _currentFile: string | null;
   private _queuedFile: string | null;
-  private _shouldRequeue: boolean;
   cleanup: () => void;
 
   constructor(audioElement: HTMLAudioElement) {
     this._audioElement = audioElement;
     this._currentFile = null;
     this._queuedFile = null;
-    this._shouldRequeue = true;
 
     const onEnd = () => {
-      if (this._shouldRequeue) {
-        this._playQueuedFile();
-      }
+      this._playFile();
     };
 
     this._audioElement.addEventListener("ended", onEnd);
@@ -39,35 +35,39 @@ export class BrowserAudio implements IAudioPlayer {
 
   play(file: string) {
     this.stop();
-    this._currentFile = file;
-    this._playFile(file);
+    this._queuedFile = file;
+    this._playFile();
   }
 
   queue(file: string) {
     this._queuedFile = file;
-
     if (
       !this._audioElement.src ||
       this._audioElement.paused ||
       this._audioElement.ended
     ) {
-      this._playQueuedFile();
+      this._playFile();
     }
   }
 
-  _playQueuedFile() {
+  stop() {
+    this._queuedFile = null;
+    this._currentFile = null;
+    this._audioElement.pause();
+    this._audioElement.currentTime = 0;
+  }
+
+  _playFile() {
     if (this._queuedFile) {
       this._currentFile = this._queuedFile;
       this._queuedFile = null;
     }
-    if (this._currentFile) {
-      this._playFile(this._currentFile);
-    }
-  }
 
-  _playFile(file: string) {
-    this._shouldRequeue = true;
-    this._audioElement.src = file;
+    if (!this._currentFile) {
+      return;
+    }
+
+    this._audioElement.src = this._currentFile;
 
     const playPromise = this._audioElement.play();
 
@@ -77,11 +77,5 @@ export class BrowserAudio implements IAudioPlayer {
         console.error(`Play error: ${error}`);
       });
     }
-  }
-
-  stop() {
-    this._shouldRequeue = false;
-    this._audioElement.pause();
-    this._audioElement.currentTime = 0;
   }
 }
