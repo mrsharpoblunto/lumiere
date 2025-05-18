@@ -29,7 +29,6 @@ export class AudioPlayer implements IAudioPlayer {
     this._queuedFile = file;
     if (this._current) {
       this._current.kill();
-      this._current = null;
     } else {
       this._playFile();
     }
@@ -47,7 +46,6 @@ export class AudioPlayer implements IAudioPlayer {
     this._currentFile = null;
     if (this._current) {
       this._current.kill();
-      this._current = null;
     }
   }
 
@@ -58,6 +56,7 @@ export class AudioPlayer implements IAudioPlayer {
     }
 
     if (!this._currentFile) {
+      this._current = null;
       return;
     }
 
@@ -78,7 +77,6 @@ export class AudioPlayer implements IAudioPlayer {
       if (code !== 0) {
         console.log(`audio player exited with code ${code}`);
       }
-      this._current = null;
       this._playFile();
     });
   }
