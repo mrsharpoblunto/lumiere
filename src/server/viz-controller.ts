@@ -38,15 +38,17 @@ export class VizController extends EventEmitter {
   private _startChildProcess(): void {
     const rendererPath = path.resolve(__dirname, "matrix-renderer.ts");
 
-    this.childProcess = spawn("sudo", ["-E", process.execPath, rendererPath], { env: {...process.env } });
+    this.childProcess = spawn("sudo", ["-E", process.execPath, rendererPath], {
+      env: { ...process.env },
+    });
 
-      this.childProcess.stdout?.on('data', (data) => {
-        try {
-	  const messages = data.toString().split("\n");
-	  for (const line of messages) {
-	if (!line.length) {
-		continue;
-	}
+    this.childProcess.stdout?.on("data", (data) => {
+      try {
+        const messages = data.toString().split("\n");
+        for (const line of messages) {
+          if (!line.length) {
+            continue;
+          }
           const message = JSON.parse(line);
           switch (message.type) {
             case "audio-volume":
@@ -72,11 +74,11 @@ export class VizController extends EventEmitter {
             default:
               console.error(`Unknown message type: ${message.type}`);
           }
-	  }
-        } catch (err) {
-          console.error("Error parsing message from render process:", err);
         }
-      });
+      } catch (err) {
+        console.error("Error parsing message from render process:", err);
+      }
+    });
 
     this.childProcess.stderr?.on("data", (data) => {
       console.error(`Render process error: ${data}`);
@@ -91,10 +93,10 @@ export class VizController extends EventEmitter {
       }
     });
 
-      this._sendToChild({
-        type: "set-state",
-        state: this.state,
-      });
+    this._sendToChild({
+      type: "set-state",
+      state: this.state,
+    });
   }
 
   private _sendToChild(message: any): void {

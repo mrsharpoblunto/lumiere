@@ -1,4 +1,4 @@
-import { type Vec2 } from "./helpers.ts";
+import type { Vec2 } from "./helpers.ts";
 
 export class FlowGrid {
   resolution: Vec2;

@@ -4,12 +4,11 @@ import http from "http";
 import https from "https";
 import fs from "fs";
 import storage from "node-persist";
-import * as hap from "hap-nodejs";
-import {v4} from "uuid";
+import { v4 } from "uuid";
 import lightAccessory from "./light-accessory.ts";
 
 import express from "express";
-import { type Express, type Request, type Response } from "express";
+import type { Express, Request, Response } from "express";
 
 //express middleware
 import morgan from "morgan";

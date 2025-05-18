@@ -1,9 +1,9 @@
 import * as M from "rpi-led-matrix";
 import * as readline from "readline";
 import visualizations from "../shared/viz/index.ts";
-import { type IVisualization } from "../shared/viz/visualization-type.ts";
+import type { IVisualization } from "../shared/viz/visualization-type.ts";
 import { MATRIX_WIDTH, MATRIX_HEIGHT } from "../shared/config.ts";
-import { type IAudioPlayer } from "../shared/audio-player-type.ts";
+import type { IAudioPlayer } from "../shared/audio-player-type.ts";
 
 interface MatrixState {
   visualization: number;
@@ -65,20 +65,20 @@ class MatrixRenderer {
     this.rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
-      terminal: false
+      terminal: false,
     });
-    this.rl.on('line', (line) => {
+    this.rl.on("line", (line) => {
       try {
         const message = JSON.parse(line);
 
         switch (message.type) {
-          case 'set-state':
-	const prevState = this.state;
-	    this.state = message.state;
+          case "set-state":
+            const prevState = this.state;
+            this.state = message.state;
             this._updateViz(prevState);
             break;
 
-          case 'identify':
+          case "identify":
             this.identify();
             break;
 
@@ -86,7 +86,7 @@ class MatrixRenderer {
             console.error(`Unknown message type: ${message.type}`);
         }
       } catch (err) {
-        console.error('Error processing message:', err);
+        console.error("Error processing message:", err);
       }
     });
 
@@ -100,8 +100,9 @@ class MatrixRenderer {
   identify(): void {
     const wasOn = this.state.on;
     if (wasOn) {
+      const prev = { ...this.state };
       this.state.on = false;
-      this._updateViz();
+      this._updateViz(prev);
     }
     this.identifying = true;
 
@@ -119,8 +120,9 @@ class MatrixRenderer {
       } else {
         this.identifying = false;
         if (wasOn) {
+          const prev = { ...this.state };
           this.state.on = true;
-          this._updateViz();
+          this._updateViz(prev);
           console.log(JSON.stringify({ type: "identify-complete" }));
         }
       }
@@ -132,7 +134,7 @@ class MatrixRenderer {
   _afterSync(_matrix: any, dt: number, _t: number): void {
     const viz = this.visualizations[this.state.visualization];
     try {
-      viz.run(this.matrix, this.audioPlayer, dt, (new Date()).getTime());
+      viz.run(this.matrix, this.audioPlayer, dt, new Date().getTime());
     } catch (ex: any) {
       console.error(ex.stack);
     }
@@ -147,27 +149,27 @@ class MatrixRenderer {
     }, Math.max(16 - dt, 0));
   }
 
-  _updateViz(prevState: VizState | null): void {
+  _updateViz(prevState: MatrixState | null): void {
     if (!this.state.on) {
-    if (this.activeTimeout) {
-      clearTimeout(this.activeTimeout as NodeJS.Timeout);
-      this.activeTimeout = 0;
-    }
+      if (this.activeTimeout) {
+        clearTimeout(this.activeTimeout as NodeJS.Timeout);
+        this.activeTimeout = 0;
+      }
       this.audioPlayer.stop();
       this.matrix
-        .afterSync(() => { })
+        .afterSync(() => {})
         .clear()
         .sync();
     } else if (this.state.on) {
-if (!prevState || (prevState?.visualization !== this.state.visualization)) {
-      const viz = this.visualizations[this.state.visualization];
-      this.audioPlayer.volume(viz.volume);
-      if (viz.audio) {
-        this.audioPlayer.play(viz.audio);
-      } else {
-        this.audioPlayer.stop();
+      if (!prevState || prevState?.visualization !== this.state.visualization) {
+        const viz = this.visualizations[this.state.visualization];
+        this.audioPlayer.volume(viz.volume);
+        if (viz.audio) {
+          this.audioPlayer.play(viz.audio);
+        } else {
+          this.audioPlayer.stop();
+        }
       }
-}
 
       if (!prevState?.on) {
         this.matrix.afterSync(this._afterSync.bind(this)).clear().sync();
@@ -178,17 +180,17 @@ if (!prevState || (prevState?.visualization !== this.state.visualization)) {
 
 const renderer = new MatrixRenderer({
   visualization: 0,
-  on: false
+  on: false,
 });
 
-process.on('SIGINT', () => {
+process.on("SIGINT", () => {
   if (renderer.activeTimeout) {
     clearTimeout(renderer.activeTimeout as NodeJS.Timeout);
   }
   process.exit(0);
 });
 
-process.on('SIGTERM', () => {
+process.on("SIGTERM", () => {
   if (renderer.activeTimeout) {
     clearTimeout(renderer.activeTimeout as NodeJS.Timeout);
   }

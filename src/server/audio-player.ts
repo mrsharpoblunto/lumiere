@@ -3,13 +3,12 @@
  */
 import { AUDIO_COMMAND, VOLUME_COMMAND, AUDIO_ARGS } from "./config.ts";
 import { spawn, exec, ChildProcess } from "child_process";
-import { type IAudioPlayer } from "../shared/audio-player-type.ts";
+import type { IAudioPlayer } from "../shared/audio-player-type.ts";
 
 export class AudioPlayer implements IAudioPlayer {
   private _current: ChildProcess | null;
   private _currentFile: string | null;
   private _queuedFile: string | null;
-  private _shouldRequeue: boolean;
 
   constructor() {
     this._current = null;
@@ -45,10 +44,10 @@ export class AudioPlayer implements IAudioPlayer {
 
   stop(): void {
     this._queuedFile = null;
-    this._currentFile = null
+    this._currentFile = null;
     if (this._current) {
-     	this._current.kill();
-	    this._current = null;
+      this._current.kill();
+      this._current = null;
     }
   }
 
@@ -59,10 +58,13 @@ export class AudioPlayer implements IAudioPlayer {
     }
 
     if (!this._currentFile) {
-	    return;
+      return;
     }
 
-    this._current = spawn(AUDIO_COMMAND, [...AUDIO_ARGS, `audio/${this._currentFile}`]);
+    this._current = spawn(AUDIO_COMMAND, [
+      ...AUDIO_ARGS,
+      `audio/${this._currentFile}`,
+    ]);
     this._current.stdout?.on("data", (data) => {
       console.log(`audio stdout:\n${data}`);
     });
@@ -80,5 +82,4 @@ export class AudioPlayer implements IAudioPlayer {
       this._playFile();
     });
   }
-
 }

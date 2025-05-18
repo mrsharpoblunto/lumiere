@@ -1,5 +1,5 @@
 import { lerp, vecLength, vecNormalize } from "./helpers.ts";
-import { type IVisualization } from "./visualization-type.ts";
+import type { IVisualization } from "./visualization-type.ts";
 import { FlowGrid } from "./flow-grid.ts";
 
 const MAX_PARTICLES = 64;

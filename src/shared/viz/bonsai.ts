@@ -27,12 +27,12 @@ import SunCalc from "suncalc";
 
 import { FlowGrid } from "./flow-grid.ts";
 import { drawAsset, drawAssetsLerp } from "./helpers.ts";
-import {
-  type IVisualization,
-  type Color,
-  type LedMatrixInstance,
+import type {
+  IVisualization,
+  Color,
+  LedMatrixInstance,
 } from "./visualization-type.ts";
-import { type IAudioPlayer } from "../audio-player-type.ts";
+import type { IAudioPlayer } from "../audio-player-type.ts";
 
 const MAX_STARS = 64;
 const MAX_CLOUDS = 4;

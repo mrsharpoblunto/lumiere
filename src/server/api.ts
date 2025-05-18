@@ -1,7 +1,7 @@
 /*
  * @format
  */
-import { type Express, type Request, type Response } from "express";
+import type { Express, Request, Response } from "express";
 import * as winston from "winston";
 import storage from "node-persist";
 import * as config from "./config.ts";
@@ -17,6 +17,16 @@ type VizEvent = {
   state: any;
 };
 
+declare global {
+  namespace Express {
+    interface Application {
+      logger?: winston.Logger;
+      storage?: typeof storage;
+      vizController?: VizController;
+    }
+  }
+}
+
 export function configureApiRoutes(app: AppWithExtensions): void {
   function waitForVizEvent(
     timeout: number,
@@ -29,7 +39,7 @@ export function configureApiRoutes(app: AppWithExtensions): void {
       }
       callback(true, null);
     }, timeout);
-    
+
     listener = (state: VizEvent) => {
       if (app.vizController && listener) {
         app.vizController.removeListener("change", listener);
@@ -37,7 +47,7 @@ export function configureApiRoutes(app: AppWithExtensions): void {
       clearTimeout(timeoutHandle);
       callback(false, state);
     };
-    
+
     if (app.vizController) {
       app.vizController.addListener("change", listener);
     }
@@ -49,7 +59,7 @@ export function configureApiRoutes(app: AppWithExtensions): void {
     if (
       app.vizController &&
       JSON.stringify(queryState) !==
-      JSON.stringify(app.vizController.getState())
+        JSON.stringify(app.vizController.getState())
     ) {
       return res.json({
         success: true,
@@ -62,8 +72,8 @@ export function configureApiRoutes(app: AppWithExtensions): void {
       });
       res.write(""); // flush headers to the client
       waitForVizEvent(
-        parseInt(req.query.timeout as string, 10) < 60000 
-          ? parseInt(req.query.timeout as string, 10) 
+        parseInt(req.query.timeout as string, 10) < 60000
+          ? parseInt(req.query.timeout as string, 10)
           : 60000,
         (timedOut, event) => {
           res.write(
@@ -93,7 +103,7 @@ export function configureApiRoutes(app: AppWithExtensions): void {
       if (!app.vizController || !app.storage) {
         throw new Error("VizController or storage not initialized");
       }
-      
+
       const { on } = app.vizController.toggleOn(config.WEB_USER);
       await app.storage.setItem(
         config.VIZ_KEY,
@@ -117,7 +127,7 @@ export function configureApiRoutes(app: AppWithExtensions): void {
       if (!app.vizController || !app.storage) {
         throw new Error("VizController or storage not initialized");
       }
-      
+
       const { visualization } = app.vizController.setVisualization(
         parseInt(req.body.visualization, 10),
         config.WEB_USER
@@ -126,9 +136,7 @@ export function configureApiRoutes(app: AppWithExtensions): void {
         config.VIZ_KEY,
         JSON.stringify(app.vizController.getState())
       );
-      app.logger?.info(
-        "Set viz to " + visualization
-      );
+      app.logger?.info("Set viz to " + visualization);
       res.json({
         success: true,
         visualization,

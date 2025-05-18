@@ -1,6 +1,6 @@
 import { fileURLToPath } from "url";
 import path from "path";
-import { type Response } from "express";
+import type { Response } from "express";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
