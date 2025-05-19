@@ -1,5 +1,5 @@
 import React from "react";
-import ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 import { IAudioPlayer } from "../shared/audio-player-type.ts";
 import { IVisualization } from "../shared/viz/visualization-type.ts";
 import visualizations from "../shared/viz/index.ts";
@@ -171,9 +171,35 @@ function Visualization(props: {
 
   const canvasRef = React.useRef(null);
   const audioRef = React.useRef(null);
+  const [isIntersecting, setIsIntersecting] = React.useState(false);
+  const observerRef = React.useRef<IntersectionObserver | null>(null);
 
   React.useEffect(() => {
     if (!canvasRef.current) {
+      return;
+    }
+
+    // Set up intersection observer
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          setIsIntersecting(entry.isIntersecting);
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    observerRef.current.observe(canvasRef.current);
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [canvasRef]);
+
+  React.useEffect(() => {
+    if (!canvasRef.current || !isIntersecting) {
       return;
     }
 
@@ -224,7 +250,7 @@ function Visualization(props: {
         pending = null;
       }
     };
-  }, [audio, viz, canvasRef, audioRef]);
+  }, [audio, viz, canvasRef, audioRef, isIntersecting]);
 
   return (
     <>
@@ -575,4 +601,8 @@ window.onerror = function (message, source, lineno, colno, error) {
   return false;
 };
 
-ReactDOM.render(<App />, document.getElementById("app-container"));
+const container = document.getElementById("app-container");
+if (container) {
+  const root = createRoot(container);
+  root.render(<App />);
+}

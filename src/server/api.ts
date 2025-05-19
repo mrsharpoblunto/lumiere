@@ -1,10 +1,10 @@
-import type { Express, Request, Response } from "express";
+import type { Application, Express, Request, Response, Router } from "express";
 import * as winston from "winston";
 import storage from "node-persist";
 import * as config from "./config.ts";
 import { VizController } from "./viz-controller.ts";
 
-type AppWithExtensions = Express & {
+type AppWithExtensions = Application & {
   logger?: winston.Logger;
   storage?: typeof storage;
   vizController?: VizController;
