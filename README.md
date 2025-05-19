@@ -1,6 +1,6 @@
 # Lumiere
 
-Control an LED matrix for an animated display on a Raspberry Pi.
+Control an LED matrix for an animated display on a Raspberry Pi. If you want to see some of the animations in your browser, check out [vibes.pixelheart.io](https://vibes.pixelheart.io/).
 
 ![Fireplace installation](/fireplace.gif)
 
