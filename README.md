@@ -14,6 +14,7 @@ Control an LED matrix for an animated display on a Raspberry Pi.
 
 - To install, run `./scripts/setup.sh`
 - Turn off onboard sound by setting `dtparam=audio=off` in `/boot/firmware/config.txt`
+    - NOTE: you may also need to add `blacklist snd_bcm2835` to `/etc/modprobe.d/raspi-blacklist.conf`
 - Add to HomeKit by entering the pin `HOMEKIT_PINCODE` located in `src/server/config.ts`
 - Navigate to the webUI on https://<address_of_pi/
 
