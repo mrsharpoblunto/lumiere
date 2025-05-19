@@ -1,6 +1,3 @@
-/*
- * @format
- */
 import type { Express, Request, Response } from "express";
 import * as winston from "winston";
 import storage from "node-persist";

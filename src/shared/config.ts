@@ -1,6 +1,3 @@
-/**
- * @format
- */
 export const MATRIX_WIDTH = 64;
 export const MATRIX_HEIGHT = 32;
 export const LATITUDE = 37.563;

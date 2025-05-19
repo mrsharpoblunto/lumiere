@@ -1,6 +1,3 @@
-/**
- * @format
- */
 import { AUDIO_COMMAND, VOLUME_COMMAND, AUDIO_ARGS } from "./config.ts";
 import { spawn, exec, ChildProcess } from "child_process";
 import type { IAudioPlayer } from "../shared/audio-player-type.ts";
