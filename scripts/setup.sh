@@ -22,7 +22,7 @@ setcap 'cap_net_bind_service=+ep' $(which node)
 
 # build the app & web client
 npm install
-npm run build
+npm run build:client
 
 # generate self signed ssl certs
 ip address show | grep -Po '(?<=inet )\d*.\d*.\d*.\d*.(?=/)' | while read -r line

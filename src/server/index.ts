@@ -98,13 +98,13 @@ function configureRoutes(
 ) {
   app.use(
     express.static(
-      path.join(__dirname, "../../dist-client"),
+      path.join(__dirname, "../../dist/client"),
       config.PUBLIC_STATIC_CACHING
     )
   );
   // serve the web UI
   app.get("/*path", (_req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, "../../dist-client", "index.html"));
+    res.sendFile(path.join(__dirname, "../../dist/client", "index.html"));
   });
 }
 
