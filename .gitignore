@@ -2,5 +2,4 @@ node_modules
 ssl
 persist
 dist-client
-.parcel-cache
 .DS_Store
