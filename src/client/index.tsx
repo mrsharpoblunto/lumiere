@@ -388,6 +388,7 @@ function App() {
         }
         
         .toggle-button {
+          appearance: none;
           position: fixed;
           top: 8px;
           left: 8px;

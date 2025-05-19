@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "rimraf dist-client/ && tsc && vite build",
+    "build": "rimraf dist-client/ && vite build",
     "server": "node src/server/index.ts",
     "dev:server": "nodemon --watch src/server --inspect src/server/index.ts",
     "dev:client": "vite --port 3001",
