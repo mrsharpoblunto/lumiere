@@ -59,7 +59,6 @@ function VisualizationList() {
 
   const handleUpdateAverageColor = (color: FastAverageColorResult) => {
     if (containerRef.current) {
-      console.log(color);
       if (prevColorRef.current) {
         prevColorRef.current = [
           prevColorRef.current[0] * (1.0 - AVERAGE_COLOR_BLEND) +

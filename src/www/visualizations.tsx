@@ -1,8 +1,9 @@
 import visualizations from "../shared/viz/index.ts";
 import { MATRIX_WIDTH, MATRIX_HEIGHT } from "../shared/config.ts";
 import { IVisualization } from "../shared/viz/visualization-type.ts";
+import { Backbuffer } from "../shared/viz/back-buffer.ts";
 import { IAudioPlayer } from "../shared/audio-player-type.ts";
-import { CanvasMatrix } from "./canvas-matrix.ts";
+import { CanvasOutput } from "./canvas-output.ts";
 import { BrowserAudio, NullAudio } from "./browser-audio.ts";
 import { FastAverageColor, FastAverageColorResult } from "fast-average-color";
 import React from "react";
@@ -61,7 +62,8 @@ export function Visualization(props: {
 
     const fac = new FastAverageColor();
 
-    const matrix = new CanvasMatrix(
+    const backbuffer = new Backbuffer(MATRIX_WIDTH, MATRIX_HEIGHT);
+    const output = new CanvasOutput(
       MATRIX_WIDTH,
       MATRIX_HEIGHT,
       canvasRef.current
@@ -77,10 +79,15 @@ export function Visualization(props: {
 
     let cleanup = false;
     let pending: number | null = null;
+    let now = new Date().getTime();
 
-    matrix.afterSync((m, dt, t) => {
+    const render = () => {
       if (!cleanup) {
-        viz.run(m, player, dt, t);
+        const t = new Date().getTime();
+        const dt = t - now;
+        now = t;
+        viz.run(backbuffer, player, dt, t);
+        backbuffer.present(output);
         if (props.calculateAverageColor) {
           fac
             .getColorAsync(canvasRef.current, { algorithm: "dominant" })
@@ -88,13 +95,10 @@ export function Visualization(props: {
               props.onUpdateAverageColor?.(color);
             });
         }
-        pending = window.requestAnimationFrame(() => {
-          pending = null;
-          m.sync();
-        });
+        pending = window.requestAnimationFrame(render);
       }
-    });
-    matrix.sync();
+    };
+    pending = window.requestAnimationFrame(render);
 
     return () => {
       cleanup = true;
@@ -103,7 +107,6 @@ export function Visualization(props: {
       }
       if (pending) {
         window.cancelAnimationFrame(pending);
-        pending = null;
       }
     };
   }, [audio, viz, canvasRef, audioRef, isIntersecting]);

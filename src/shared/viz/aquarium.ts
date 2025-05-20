@@ -1,21 +1,18 @@
 import type { Vec2 } from "./helpers.ts";
-import {lerp, mul, vecLength, vecNormalize } from "./helpers.ts";
-import type {
-  IVisualization,
-  Color,
-  LedMatrixInstance,
-} from "./visualization-type.ts";
+import { lerp, mul, vecLength, vecNormalize } from "./helpers.ts";
+import type { IVisualization } from "./visualization-type.ts";
 import { FlowGrid } from "./flow-grid.ts";
 import type { IAudioPlayer } from "../audio-player-type.ts";
+import type { Backbuffer, RGBAColor } from "../back-buffer.ts";
 
 const FLOOR_LAYERS = 8;
-const SAND_BASE = { r: 128, g: 128, b: 64 };
-const SAND_DARK = { r: 64, g: 64, b: 16 };
+const SAND_BASE = { r: 128, g: 128, b: 64, a: 255 };
+const SAND_DARK = { r: 64, g: 64, b: 16, a: 255 };
 const SAND_TEXTURE_DENSITY = 5;
-const KELP = { r: 0, g: 102, b: 0 };
+const KELP = { r: 0, g: 102, b: 0, a: 255 };
 const KELP_DENSITY = 4;
-const WATER = { r: 0, g: 16, b: 96 };
-const WATER_BASE = { r: 0, g: 32, b: 64 };
+const WATER = { r: 0, g: 16, b: 96, a: 255 };
+const WATER_BASE = { r: 0, g: 32, b: 64, a: 255 };
 const FISH_COUNT = 2;
 const FISH_VELOCITY = 10;
 const FLOW_GRID_RESOLUTION = 8;
@@ -38,7 +35,7 @@ class Movable {
   width: number;
   height: number;
 
-  draw(_matrix: LedMatrixInstance) {}
+  draw(_backbuffer: Backbuffer) {}
 
   constructor(top: number, left: number, bottom: number, right: number) {
     this._x = 0;
@@ -117,75 +114,79 @@ class Movable {
 }
 
 class ArawanaFish extends Movable {
-  _main?: Color;
-  _mainBright?: Color;
-  _mainDark?: Color;
-  _fin?: Color;
+  _main?: RGBAColor;
+  _mainBright?: RGBAColor;
+  _mainDark?: RGBAColor;
+  _fin?: RGBAColor;
 
   constructor() {
     super(-6, -22, 7, 15);
   }
 
-  draw(matrix: LedMatrixInstance) {
+  draw(backbuffer: Backbuffer) {
     if (!this._main || !this._mainBright || !this._mainDark || !this._fin) {
       return;
     }
 
-    matrix
-      .fgColor(this._mainBright)
-      .drawLine(this.x(-8), this.y(-5), this.x(15), this.y(-5))
-      .fgColor(this._main)
-      .fill(this.x(-7), this.y(-4), this.x(9), this.y(4))
-      .fill(this.x(10), this.y(-4), this.x(14), this.y(-2))
-      .fill(this.x(10), this.y(-2), this.x(13), this.y(0))
-      .fill(this.x(10), this.y(0), this.x(12), this.y(2))
-      .fill(this.x(10), this.y(0), this.x(12), this.y(2))
-      .drawLine(this.x(10), this.y(3), this.x(11), this.y(3))
-      .setPixel(this.x(10), this.y(4))
-      .drawLine(this.x(-17), this.y(0), this.x(-8), this.y(0))
-      .drawLine(this.x(-15), this.y(-1), this.x(-8), this.y(-1))
-      .drawLine(this.x(-13), this.y(-2), this.x(-8), this.y(-2))
-      .drawLine(this.x(-11), this.y(-3), this.x(-8), this.y(-3))
-      .drawLine(this.x(-9), this.y(-4), this.x(-8), this.y(-4))
-      .drawLine(this.x(-15), this.y(1), this.x(-8), this.y(1))
-      .drawLine(this.x(-13), this.y(2), this.x(-8), this.y(2))
-      .drawLine(this.x(-11), this.y(3), this.x(-8), this.y(3))
-      .drawLine(this.x(-9), this.y(4), this.x(-8), this.y(4))
-      .fgColor(this._mainDark)
-      .drawLine(this.x(15), this.y(-4), this.x(15), this.y(-2))
-      .drawLine(this.x(15), this.y(-2), this.x(14), this.y(-2))
-      .drawLine(this.x(14), this.y(-2), this.x(14), this.y(0))
-      .drawLine(this.x(14), this.y(0), this.x(13), this.y(0))
-      .drawLine(this.x(13), this.y(0), this.x(13), this.y(2))
-      .drawLine(this.x(13), this.y(2), this.x(12), this.y(3))
-      .drawLine(this.x(12), this.y(3), this.x(11), this.y(4))
-      .drawLine(this.x(11), this.y(4), this.x(9), this.y(5))
-      .drawLine(this.x(9), this.y(5), this.x(-7), this.y(5))
+    backbuffer
+      .drawLine(
+        this.x(-8),
+        this.y(-5),
+        this.x(15),
+        this.y(-5),
+        this._mainBright
+      )
+      .fill(this.x(-7), this.y(-4), this.x(9), this.y(4), this._main)
+      .fill(this.x(10), this.y(-4), this.x(14), this.y(-2), this._main)
+      .fill(this.x(10), this.y(-2), this.x(13), this.y(0), this._main)
+      .fill(this.x(10), this.y(0), this.x(12), this.y(2), this._main)
+      .fill(this.x(10), this.y(0), this.x(12), this.y(2), this._main)
+      .drawLine(this.x(10), this.y(3), this.x(11), this.y(3), this._main)
+      .setPixel(this.x(10), this.y(4), this._main)
+      .drawLine(this.x(-17), this.y(0), this.x(-8), this.y(0), this._main)
+      .drawLine(this.x(-15), this.y(-1), this.x(-8), this.y(-1), this._main)
+      .drawLine(this.x(-13), this.y(-2), this.x(-8), this.y(-2), this._main)
+      .drawLine(this.x(-11), this.y(-3), this.x(-8), this.y(-3), this._main)
+      .drawLine(this.x(-9), this.y(-4), this.x(-8), this.y(-4), this._main)
+      .drawLine(this.x(-15), this.y(1), this.x(-8), this.y(1), this._main)
+      .drawLine(this.x(-13), this.y(2), this.x(-8), this.y(2), this._main)
+      .drawLine(this.x(-11), this.y(3), this.x(-8), this.y(3), this._main)
+      .drawLine(this.x(-9), this.y(4), this.x(-8), this.y(4), this._main)
+      .drawLine(this.x(15), this.y(-4), this.x(15), this.y(-2), this._mainDark)
+      .drawLine(this.x(15), this.y(-2), this.x(14), this.y(-2), this._mainDark)
+      .drawLine(this.x(14), this.y(-2), this.x(14), this.y(0), this._mainDark)
+      .drawLine(this.x(14), this.y(0), this.x(13), this.y(0), this._mainDark)
+      .drawLine(this.x(13), this.y(0), this.x(13), this.y(2), this._mainDark)
+      .drawLine(this.x(13), this.y(2), this.x(12), this.y(3), this._mainDark)
+      .drawLine(this.x(12), this.y(3), this.x(11), this.y(4), this._mainDark)
+      .drawLine(this.x(11), this.y(4), this.x(9), this.y(5), this._mainDark)
+      .drawLine(this.x(9), this.y(5), this.x(-7), this.y(5), this._mainDark)
       // fin
-      .fgColor(this._fin)
-      .drawLine(this.x(-16), this.y(-6), this.x(-4), this.y(-6))
-      .drawLine(this.x(-14), this.y(-5), this.x(-7), this.y(-5))
-      .drawLine(this.x(-16), this.y(6), this.x(-4), this.y(6))
-      .drawLine(this.x(-14), this.y(5), this.x(-2), this.y(5))
-
-      .drawLine(this.x(-22), this.y(0), this.x(-18), this.y(0))
-      .drawLine(this.x(-20), this.y(-1), this.x(-16), this.y(-1))
-      .drawLine(this.x(-18), this.y(-2), this.x(-14), this.y(-2))
-      .drawLine(this.x(-16), this.y(-3), this.x(-12), this.y(-3))
-      .drawLine(this.x(-14), this.y(-4), this.x(-10), this.y(-4))
-      .drawLine(this.x(-20), this.y(1), this.x(-16), this.y(1))
-      .drawLine(this.x(-18), this.y(2), this.x(-14), this.y(2))
-      .drawLine(this.x(-16), this.y(3), this.x(-12), this.y(3))
-      .drawLine(this.x(-14), this.y(4), this.x(-10), this.y(4))
-
-      .drawLine(this.x(8), this.y(3), this.x(3), this.y(7))
-      .drawLine(this.x(7), this.y(3), this.x(2), this.y(7))
+      .drawLine(this.x(-16), this.y(-6), this.x(-4), this.y(-6), this._fin)
+      .drawLine(this.x(-14), this.y(-5), this.x(-7), this.y(-5), this._fin)
+      .drawLine(this.x(-16), this.y(6), this.x(-4), this.y(6), this._fin)
+      .drawLine(this.x(-14), this.y(5), this.x(-2), this.y(5), this._fin)
+      .drawLine(this.x(-22), this.y(0), this.x(-18), this.y(0), this._fin)
+      .drawLine(this.x(-20), this.y(-1), this.x(-16), this.y(-1), this._fin)
+      .drawLine(this.x(-18), this.y(-2), this.x(-14), this.y(-2), this._fin)
+      .drawLine(this.x(-16), this.y(-3), this.x(-12), this.y(-3), this._fin)
+      .drawLine(this.x(-14), this.y(-4), this.x(-10), this.y(-4), this._fin)
+      .drawLine(this.x(-20), this.y(1), this.x(-16), this.y(1), this._fin)
+      .drawLine(this.x(-18), this.y(2), this.x(-14), this.y(2), this._fin)
+      .drawLine(this.x(-16), this.y(3), this.x(-12), this.y(3), this._fin)
+      .drawLine(this.x(-14), this.y(4), this.x(-10), this.y(4), this._fin)
+      .drawLine(this.x(8), this.y(3), this.x(3), this.y(7), this._fin)
+      .drawLine(this.x(7), this.y(3), this.x(2), this.y(7), this._fin)
       // eye
-      .fgColor({ r: 0, g: 0, b: 0 })
-      .drawLine(this.x(11), this.y(-3), this.x(12), this.y(-3));
+      .drawLine(this.x(11), this.y(-3), this.x(12), this.y(-3), {
+        r: 0,
+        g: 0,
+        b: 0,
+        a: 255,
+      });
   }
 
-  setColors(main: Color) {
+  setColors(main: RGBAColor) {
     this._main = main;
     this._mainBright = mul(main, 1.2, 255);
     this._mainDark = mul(main, 0.8, 255);
@@ -195,29 +196,16 @@ class ArawanaFish extends Movable {
 
 class PufferFish extends Movable {
   _puffed: boolean;
-  _main?: Color;
-  _mainBright?: Color;
-  _mainDark?: Color;
+  _main?: RGBAColor;
+  _mainBright?: RGBAColor;
+  _mainDark?: RGBAColor;
 
   constructor() {
     super(-6, -8, 5, 5);
     this._puffed = false;
   }
 
-  _fillSafe(
-    matrix: LedMatrixInstance,
-    x0: number,
-    y0: number,
-    x1: number,
-    y1: number
-  ) {
-    if (y1 >= 0) {
-      matrix.fill(x0, Math.max(0, y0), x1, y1);
-    }
-    return matrix;
-  }
-
-  draw(matrix: LedMatrixInstance) {
+  draw(backbuffer: Backbuffer) {
     if (!this._main || !this._mainBright || !this._mainDark) {
       return;
     }
@@ -228,49 +216,75 @@ class PufferFish extends Movable {
       this._vx *= 0.5;
     }
 
-    matrix.fgColor(this._main);
-    this._fillSafe(matrix, this.x(-4), this.y(-3), this.x(4), this.y(2))
-      .drawLine(this.x(5), this.y(-2), this.x(5), this.y(0))
-      .drawLine(this.x(-5), this.y(-2), this.x(-5), this.y(1));
-    this._fillSafe(matrix, this.x(-8), this.y(-4), this.x(-6), this.y(-2));
-    this._fillSafe(matrix, this.x(-8), this.y(0), this.x(-6), this.y(2))
-      .fgColor(this._mainBright)
-      .drawLine(this.x(-4), this.y(-3), this.x(4), this.y(-3))
-      .fgColor(this._mainDark)
-      .drawLine(this.x(-4), this.y(2), this.x(4), this.y(2))
-      .drawLine(this.x(4), this.y(1), this.x(4), this.y(2))
-      // eye
-      .fgColor({ r: 255, g: 255, b: 255 });
-    this._fillSafe(matrix, this.x(1), this.y(-2), this.x(3), this.y(0))
-      .fgColor({ r: 0, g: 0, b: 0 })
-      .setPixel(this.x(2), this.y(-1));
+    backbuffer.fill(
+      this.x(-4),
+      this.y(-3),
+      this.x(4),
+      this.y(2),
+      this._main
+    )
+      .drawLine(this.x(5), this.y(-2), this.x(5), this.y(0), this._main)
+      .drawLine(this.x(-5), this.y(-2), this.x(-5), this.y(1), this._main);
+      backbuffer.fill(
+      this.x(-8),
+      this.y(-4),
+      this.x(-6),
+      this.y(-2),
+      this._main
+    )
+      backbuffer.fill(
+      this.x(-8),
+      this.y(0),
+      this.x(-6),
+      this.y(2),
+      this._main
+    )
+      .drawLine(this.x(-4), this.y(-3), this.x(4), this.y(-3), this._mainBright)
+      .drawLine(this.x(-4), this.y(2), this.x(4), this.y(2), this._mainDark)
+      .drawLine(this.x(4), this.y(1), this.x(4), this.y(2), this._mainDark)
+    // eye
+    backbuffer.fill( this.x(1), this.y(-2), this.x(3), this.y(0), {
+      r: 255,
+      g: 255,
+      b: 255,
+      a: 255,
+    }).setPixel(this.x(2), this.y(-1), { r: 0, g: 0, b: 0, a: 255 });
 
     if (this._puffed) {
-      matrix.fgColor(this._mainDark);
-      this._fillSafe(matrix, this.x(-2), this.y(3), this.x(4), this.y(6))
-        .drawLine(this.x(5), this.y(1), this.x(5), this.y(4))
-        .drawLine(this.x(-4), this.y(3), this.x(-4), this.y(4))
-        .drawLine(this.x(-3), this.y(3), this.x(-3), this.y(5))
-        .fgColor(this._mainBright)
-        .drawLine(this.x(-2), this.y(-4), this.x(2), this.y(-4))
-        .setPixel(this.x(-2), this.y(-5))
-        .setPixel(this.x(1), this.y(-5))
-        .setPixel(this.x(4), this.y(-4))
-        .setPixel(this.x(-4), this.y(5))
-        .setPixel(this.x(-1), this.y(6))
-        .setPixel(this.x(2), this.y(6))
-        .setPixel(this.x(5), this.y(3))
-        .setPixel(this.x(6), this.y(-1))
+        backbuffer.fill(
+        this.x(-2),
+        this.y(3),
+        this.x(4),
+        this.y(6),
+        this._mainDark
+      )
+        .drawLine(this.x(5), this.y(1), this.x(5), this.y(4), this._mainDark)
+        .drawLine(this.x(-4), this.y(3), this.x(-4), this.y(4), this._mainDark)
+        .drawLine(this.x(-3), this.y(3), this.x(-3), this.y(5), this._mainDark)
+        .drawLine(
+          this.x(-2),
+          this.y(-4),
+          this.x(2),
+          this.y(-4),
+          this._mainBright
+        )
+        .setPixel(this.x(-2), this.y(-5), this._mainBright)
+        .setPixel(this.x(1), this.y(-5), this._mainBright)
+        .setPixel(this.x(4), this.y(-4), this._mainBright)
+        .setPixel(this.x(-4), this.y(5), this._mainBright)
+        .setPixel(this.x(-1), this.y(6), this._mainBright)
+        .setPixel(this.x(2), this.y(6), this._mainBright)
+        .setPixel(this.x(5), this.y(3), this._mainBright)
+        .setPixel(this.x(6), this.y(-1), this._mainBright)
         // eye
-        .fgColor({ r: 255, g: 255, b: 255 })
-        .setPixel(this.x(0), this.y(-1))
-        .setPixel(this.x(4), this.y(-1))
-        .setPixel(this.x(2), this.y(-3))
-        .setPixel(this.x(2), this.y(1));
+        .setPixel(this.x(0), this.y(-1), { r: 255, g: 255, b: 255, a: 255 })
+        .setPixel(this.x(4), this.y(-1), { r: 255, g: 255, b: 255, a: 255 })
+        .setPixel(this.x(2), this.y(-3), { r: 255, g: 255, b: 255, a: 255 })
+        .setPixel(this.x(2), this.y(1), { r: 255, g: 255, b: 255, a: 255 });
     }
   }
 
-  setColors(main: Color) {
+  setColors(main: RGBAColor) {
     this._main = main;
     this._mainBright = mul(main, 1.3, 255);
     this._mainDark = mul(main, 0.6, 255);
@@ -278,17 +292,17 @@ class PufferFish extends Movable {
 }
 
 class SunFish extends Movable {
-  _main?: Color;
-  _mainBright?: Color;
-  _mainDark?: Color;
-  _fin?: Color;
-  _nose?: Color;
+  _main?: RGBAColor;
+  _mainBright?: RGBAColor;
+  _mainDark?: RGBAColor;
+  _fin?: RGBAColor;
+  _nose?: RGBAColor;
 
   constructor() {
     super(-7, -9, 7, 8);
   }
 
-  draw(matrix: LedMatrixInstance) {
+  draw(backbuffer: Backbuffer) {
     if (
       !this._main ||
       !this._mainBright ||
@@ -299,46 +313,53 @@ class SunFish extends Movable {
       return;
     }
 
-    matrix
-      .fgColor(this._main)
-      .fill(this.x(-7), this.y(-5), this.x(6), this.y(5))
-      .fgColor(this._mainDark)
-      .drawLine(this.x(8), this.y(-1), this.x(8), this.y(1))
-      .drawLine(this.x(8), this.y(1), this.x(6), this.y(1))
-      .drawLine(this.x(6), this.y(1), this.x(6), this.y(5))
-      .drawLine(this.x(6), this.y(5), this.x(-7), this.y(5))
-      .drawLine(this.x(-7), this.y(5), this.x(-7), this.y(7))
-      .drawLine(this.x(-7), this.y(-7), this.x(-7), this.y(-5))
-      .drawLine(this.x(-7), this.y(7), this.x(-9), this.y(7))
+    backbuffer
+      .fill(this.x(-7), this.y(-5), this.x(6), this.y(5), this._main)
+      .drawLine(this.x(8), this.y(-1), this.x(8), this.y(1), this._mainDark)
+      .drawLine(this.x(8), this.y(1), this.x(6), this.y(1), this._mainDark)
+      .drawLine(this.x(6), this.y(1), this.x(6), this.y(5), this._mainDark)
+      .drawLine(this.x(6), this.y(5), this.x(-7), this.y(5), this._mainDark)
+      .drawLine(this.x(-7), this.y(5), this.x(-7), this.y(7), this._mainDark)
+      .drawLine(this.x(-7), this.y(-7), this.x(-7), this.y(-5), this._mainDark)
+      .drawLine(this.x(-7), this.y(7), this.x(-9), this.y(7), this._mainDark)
       //fin 1
-      .drawLine(this.x(-2), this.y(5), this.x(-2), this.y(8))
-      .drawLine(this.x(-2), this.y(8), this.x(0), this.y(8))
-      .drawLine(this.x(0), this.y(8), this.x(0), this.y(5))
-      .fgColor(this._mainBright)
-      .drawLine(this.x(-9), this.y(7), this.x(-9), this.y(-7))
-      .drawLine(this.x(-9), this.y(-7), this.x(-7), this.y(-7))
-      .drawLine(this.x(-7), this.y(-5), this.x(6), this.y(-5))
-      .drawLine(this.x(6), this.y(-5), this.x(6), this.y(-1))
-      .drawLine(this.x(6), this.y(-1), this.x(8), this.y(-1))
+      .drawLine(this.x(-2), this.y(5), this.x(-2), this.y(8), this._mainDark)
+      .drawLine(this.x(-2), this.y(8), this.x(0), this.y(8), this._mainDark)
+      .drawLine(this.x(0), this.y(8), this.x(0), this.y(5), this._mainDark)
+      .drawLine(this.x(-9), this.y(7), this.x(-9), this.y(-7), this._mainBright)
+      .drawLine(
+        this.x(-9),
+        this.y(-7),
+        this.x(-7),
+        this.y(-7),
+        this._mainBright
+      )
+      .drawLine(this.x(-7), this.y(-5), this.x(6), this.y(-5), this._mainBright)
+      .drawLine(this.x(6), this.y(-5), this.x(6), this.y(-1), this._mainBright)
+      .drawLine(this.x(6), this.y(-1), this.x(8), this.y(-1), this._mainBright)
       // fin 2
-      .drawLine(this.x(-2), this.y(-5), this.x(-2), this.y(-8))
-      .drawLine(this.x(-2), this.y(-8), this.x(0), this.y(-8))
-      .drawLine(this.x(0), this.y(-8), this.x(0), this.y(-5))
+      .drawLine(
+        this.x(-2),
+        this.y(-5),
+        this.x(-2),
+        this.y(-8),
+        this._mainBright
+      )
+      .drawLine(this.x(-2), this.y(-8), this.x(0), this.y(-8), this._mainBright)
+      .drawLine(this.x(0), this.y(-8), this.x(0), this.y(-5), this._mainBright)
       // eye
-      .fgColor(this._fin)
-      .setPixel(this.x(4), this.y(-3))
+      .setPixel(this.x(4), this.y(-3), this._fin)
       // fin 2 fill
-      .fill(this.x(-1), this.y(6), this.x(-1), this.y(7))
+      .fill(this.x(-1), this.y(6), this.x(-1), this.y(7), this._fin)
       // fin 2 fill
-      .fill(this.x(-1), this.y(-7), this.x(-1), this.y(-6))
+      .fill(this.x(-1), this.y(-7), this.x(-1), this.y(-6), this._fin)
       // tail fill
-      .fill(this.x(-8), this.y(-6), this.x(-8), this.y(6))
+      .fill(this.x(-8), this.y(-6), this.x(-8), this.y(6), this._fin)
       //nose
-      .fgColor(this._nose)
-      .setPixel(this.x(7), this.y(0));
+      .setPixel(this.x(7), this.y(0), this._nose);
   }
 
-  setColors(main: Color, fin: Color, nose: Color) {
+  setColors(main: RGBAColor, fin: RGBAColor, nose: RGBAColor) {
     this._main = main;
     this._mainBright = mul({ ...main }, 1.3, 255);
     this._mainDark = mul({ ...main }, 0.6, 255);
@@ -351,7 +372,7 @@ type Effector = Vec2 & { l: number };
 
 class Kelp {
   chain: Array<Effector>;
-  _color: Color;
+  _color: RGBAColor;
   _lerpFactor: number;
 
   constructor(
@@ -377,13 +398,18 @@ class Kelp {
     this._lerpFactor = 1.0 - layer / FLOOR_LAYERS;
   }
 
-  draw(matrix: LedMatrixInstance, water: Color) {
+  draw(backbuffer: Backbuffer, water: RGBAColor) {
     const color = lerp(this._color, water, this._lerpFactor);
 
-    matrix.fgColor(color);
     let prev = this.chain[0];
     for (let i = 1; i < this.chain.length; ++i) {
-      matrix.drawLine(prev.x, prev.y, this.chain[i].x, this.chain[i].y);
+      backbuffer.drawLine(
+        prev.x,
+        prev.y,
+        this.chain[i].x,
+        this.chain[i].y,
+        color
+      );
       prev = this.chain[i];
     }
   }
@@ -405,9 +431,9 @@ class Bubble {
     this.r = size;
     this._lerpFactor = 1.0 - layer / FLOOR_LAYERS;
   }
-  draw(matrix: LedMatrixInstance, water: Color) {
-    const color = lerp({ r: 0, g: 32, b: 128 }, water, this._lerpFactor);
-    matrix.fgColor(color).drawCircle(this.x, this.y, this.r);
+  draw(backbuffer: Backbuffer) {
+    const color = { r: 0, g: 32, b: 128, a: 128 * this._lerpFactor };
+    backbuffer.drawCircle(this.x, this.y, this.r, color);
   }
 }
 
@@ -460,6 +486,7 @@ function spawnFish(
             r: Math.round(Math.random() * 255),
             g: Math.round(Math.random() * 255),
             b: Math.round(Math.random() * 255),
+            a: 255,
           },
           lerpFactor
         )
@@ -474,6 +501,7 @@ function spawnFish(
             r: Math.round(Math.random() * 255),
             g: Math.round(Math.random() * 255),
             b: Math.round(Math.random() * 255),
+            a: 255,
           },
           lerpFactor
         )
@@ -488,6 +516,7 @@ function spawnFish(
             r: Math.round(Math.random() * 255),
             g: Math.round(Math.random() * 255),
             b: Math.round(Math.random() * 255),
+            a: 255,
           },
           lerpFactor
         ),
@@ -497,6 +526,7 @@ function spawnFish(
             r: Math.round(Math.random() * 64),
             g: Math.round(Math.random() * 64),
             b: Math.round(Math.random() * 64),
+            a: 255,
           },
           lerpFactor
         ),
@@ -506,6 +536,7 @@ function spawnFish(
             r: Math.round(Math.random() * 255),
             g: Math.round(Math.random() * 255),
             b: Math.round(Math.random() * 255),
+            a: 255,
           },
           lerpFactor
         )
@@ -621,7 +652,7 @@ export default function (width: number, height: number): IVisualization {
     audio: "aquarium.mp3",
     volume: 18,
     run: (
-      matrix: LedMatrixInstance,
+      backbuffer: Backbuffer,
       _audio: IAudioPlayer,
       dt: number,
       _t: number
@@ -690,7 +721,7 @@ export default function (width: number, height: number): IVisualization {
         spawnFish(movable, width, height);
       }
 
-      matrix.brightness(100).clear();
+      backbuffer.clear();
 
       //background
       for (let y = 0; y < height; ++y) {
@@ -698,32 +729,34 @@ export default function (width: number, height: number): IVisualization {
           r: Math.max(0, WATER.r - y),
           g: Math.max(0, WATER.g - y),
           b: Math.max(0, WATER.b - y * 2),
+          a: 255,
         };
         if (y > height - FLOOR_LAYERS) {
           const layer = y - (height - FLOOR_LAYERS);
           const light = lerp(water, SAND_BASE, layer / FLOOR_LAYERS);
           const dark = lerp(water, SAND_DARK, layer / FLOOR_LAYERS);
-          matrix
-            .fgColor(light)
-            .drawLine(0, y, width - 1, y)
-            .fgColor(dark);
+          backbuffer.drawLine(0, y, width - 1, y, light);
           for (let i = 0; i < SAND_TEXTURE_DENSITY; ++i) {
-            matrix.setPixel(sandTexture[layer * SAND_TEXTURE_DENSITY + i], y);
+            backbuffer.setPixel(
+              sandTexture[layer * SAND_TEXTURE_DENSITY + i],
+              y,
+              dark
+            );
           }
         } else {
-          matrix.fgColor(water).drawLine(0, y, width - 1, y);
+          backbuffer.drawLine(0, y, width - 1, y, water);
         }
       }
 
       for (let layer = 0; layer < FLOOR_LAYERS; ++layer) {
         for (let k of kelp[layer]) {
-          k.draw(matrix, WATER_BASE);
+          k.draw(backbuffer, WATER_BASE);
         }
         for (let m of movable[layer]) {
-          m.draw(matrix);
+          m.draw(backbuffer);
         }
         for (let b of bubbles[layer]) {
-          b.draw(matrix, WATER_BASE);
+          b.draw(backbuffer);
         }
       }
     },

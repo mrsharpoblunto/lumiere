@@ -1,6 +1,5 @@
 import EventEmitter from "events";
 import { spawn, ChildProcess } from "child_process";
-import * as readline from "readline";
 import path from "path";
 import { fileURLToPath } from "url";
 import { AudioPlayer } from "./audio-player.ts";

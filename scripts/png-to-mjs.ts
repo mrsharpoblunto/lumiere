@@ -42,22 +42,15 @@ async function processPngFile(filename: string): Promise<void> {
       .raw()
       .toBuffer({ resolveWithObject: true });
     
-    // Convert to R,G,B array, handling transparency
     const rgbArray: number[] = [];
     for (let i = 0; i < data.length; i += 4) {
-      // If pixel has alpha < 255, make it fuschia (255,0,255)
-      if (data[i + 3] < 255) {
-        rgbArray.push(255, 0, 255);
-      } else {
-        rgbArray.push(data[i], data[i + 1], data[i + 2]);
-      }
+      rgbArray.push(data[i], data[i + 1], data[i + 2], data[i + 3]);
     }
     
     // Create TypeScript content with named exports
     const tsContent = `// @generated from ${filename}
 // Dimensions: ${width}x${height}
-// Format: Linear array of [r,g,b] values
-// Transparent pixels are rendered as fuchsia (255,0,255)
+// Format: Linear array of [r,g,b,a] values
 
 export const width = ${width};
 export const height = ${height};

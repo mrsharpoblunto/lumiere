@@ -1,9 +1,11 @@
 import * as M from "rpi-led-matrix";
+import type { LedMatrixInstance } from "rpi-led-matrix";
 import * as readline from "readline";
 import visualizations from "../shared/viz/index.ts";
 import type { IVisualization } from "../shared/viz/visualization-type.ts";
 import { MATRIX_WIDTH, MATRIX_HEIGHT } from "../shared/config.ts";
 import type { IAudioPlayer } from "../shared/audio-player-type.ts";
+import { Backbuffer } from "../shared/viz/back-buffer.ts";
 
 interface MatrixState {
   visualization: number;
@@ -29,13 +31,14 @@ class AudioPlayerProxy implements IAudioPlayer {
 }
 
 class MatrixRenderer {
-  matrix: any;
+  matrix: LedMatrixInstance;
   state: MatrixState;
   activeTimeout: NodeJS.Timeout | number;
   identifying: boolean;
   visualizations: IVisualization[];
   rl: readline.Interface;
   audioPlayer: IAudioPlayer;
+  backbuffer: Backbuffer;
 
   constructor(initialState: MatrixState) {
     this.matrix = new M.LedMatrix(
@@ -52,6 +55,7 @@ class MatrixRenderer {
         gpioSlowdown: 3,
       }
     );
+    this.backbuffer = new Backbuffer(this.matrix.width(), this.matrix.height());
 
     this.state = initialState;
     this.activeTimeout = 0;
@@ -131,13 +135,10 @@ class MatrixRenderer {
     flash();
   }
 
-  _afterSync(_matrix: any, dt: number, _t: number): void {
+  _afterSync(_matrix: LedMatrixInstance, dt: number, _t: number): void {
     const viz = this.visualizations[this.state.visualization];
-    try {
-      viz.run(this.matrix, this.audioPlayer, dt, new Date().getTime());
-    } catch (ex: any) {
-      console.error(ex.stack);
-    }
+    viz.run(this.backbuffer, this.audioPlayer, dt, new Date().getTime());
+    this.backbuffer.present(this.matrix);
     this.activeTimeout = setTimeout(() => {
       if (this.state.on) {
         try {

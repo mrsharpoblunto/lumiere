@@ -119,8 +119,8 @@ export default function (width: number, height: number): IVisualization {
     name: "Fire",
     audio: "fire.mp3",
     volume: 30,
-    run: (matrix, audio, dt, t) => {
-      matrix.brightness(100).clear();
+    run: (backbuffer, audio, dt, t) => {
+      backbuffer.clear();
 
       // cycle the attractor back and forth
       for (let a of attractors) {
@@ -143,8 +143,9 @@ export default function (width: number, height: number): IVisualization {
           r: Math.pow(i / (height - 1), 6) * 255,
           g: Math.pow((i / (height - 1)) * 0.25, 6) * 255,
           b: 0,
+          a: 255,
         };
-        matrix.fgColor(c).drawLine(0, i, width - 1, i);
+        backbuffer.drawLine(0, i, width - 1, i, c);
       }
 
       // render particles
@@ -163,11 +164,11 @@ export default function (width: number, height: number): IVisualization {
           r: lerp(p.dim.r, p.bright.r, l) * 255,
           g: lerp(p.dim.g, p.bright.g, l) * 255,
           b: lerp(p.dim.b, p.bright.b, l) * 255,
+          a: 255,
         };
 
-        matrix
-          .fgColor(color)
-          .fill(p.x - size, p.y - size, p.x + size, p.y + size);
+        backbuffer
+          .fill(p.x - size, p.y - size, p.x + size, p.y + size, color);
       }
 
     },

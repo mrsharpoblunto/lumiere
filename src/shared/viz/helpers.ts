@@ -1,11 +1,11 @@
-import type { Color, LedMatrixInstance } from "./visualization-type.ts";
+import type { RGBAColor } from "../back-buffer.ts";
 
 export type Vec2 = {
   x: number;
   y: number;
 };
 
-export function lerp<T extends number | Vec2 | Color>(
+export function lerp<T extends number | Vec2 | RGBAColor>(
   v0: T,
   v1: T,
   t: number
@@ -29,22 +29,25 @@ export function lerp<T extends number | Vec2 | Color>(
     "r" in v0 &&
     "g" in v0 &&
     "b" in v0 &&
+    "a" in v0 &&
     typeof v1 === "object" &&
     "r" in v1 &&
     "g" in v1 &&
-    "b" in v1
+    "b" in v1 &&
+    "a" in v1
   ) {
     return {
       r: lerp(v0.r, v1.r, t),
       g: lerp(v0.g, v1.g, t),
       b: lerp(v0.b, v1.b, t),
+      a: lerp(v0.a, v1.a, t),
     } as T;
   } else {
     throw new Error("Invalid types for lerp");
   }
 }
 
-export function mul<T extends number | Vec2 | Color>(
+export function mul<T extends number | Vec2 | RGBAColor>(
   v0: T,
   f: number,
   max: number
@@ -56,19 +59,26 @@ export function mul<T extends number | Vec2 | Color>(
       x: Math.min(v0.x * f, max),
       y: Math.min(v0.y * f, max),
     } as T;
-  } else if (typeof v0 === "object" && "r" in v0 && "g" in v0 && "b" in v0) {
+  } else if (
+    typeof v0 === "object" &&
+    "r" in v0 &&
+    "g" in v0 &&
+    "b" in v0 &&
+    "a" in v0
+  ) {
     return {
       r: Math.min(v0.r * f, max),
       g: Math.min(v0.g * f, max),
       b: Math.min(v0.b * f, max),
+      a: Math.min(v0.a * f, max),
     } as T;
   } else {
     throw new Error("Invalid types for lerp");
   }
 }
 
-export function colorEquals(c0: Color, c1: Color): boolean {
-  return c0.r === c1.r && c0.g === c1.g && c0.b === c1.b;
+export function colorEquals(c0: RGBAColor, c1: RGBAColor): boolean {
+  return c0.r === c1.r && c0.g === c1.g && c0.b === c1.b && c0.a === c1.a;
 }
 
 export function vecNormalize(v: Vec2): Vec2 {
@@ -82,83 +92,9 @@ export function vecLength(v: Vec2): number {
   return Math.sqrt(Math.pow(v.x, 2) + Math.pow(v.y, 2));
 }
 
-export type Asset = {
-  width: number;
-  height: number;
-  data: number[];
-};
-
-export function drawAsset(
-  matrix: LedMatrixInstance,
-  x: number,
-  y: number,
-  asset: Asset
-): LedMatrixInstance {
-  const { width, height, data } = asset;
-
-  const FUCHSIA = [255, 0, 255];
-
-  for (let py = 0; py < height; py++) {
-    for (let px = 0; px < width; px++) {
-      // Calculate index in the data array (3 values per pixel - r,g,b)
-      const idx = (py * width + px) * 3;
-      const r = data[idx];
-      const g = data[idx + 1];
-      const b = data[idx + 2];
-
-      // Skip fuchsia (transparent) pixels
-      if (r === FUCHSIA[0] && g === FUCHSIA[1] && b === FUCHSIA[2]) {
-        continue;
-      }
-
-      const targetX = x + px;
-      const targetY = y + py;
-      if (targetX >= 0 && targetY >= 0) {
-        matrix.fgColor({ r, g, b }).setPixel(targetX, targetY);
-      }
-    }
-  }
-
-  return matrix;
-}
-
-export function drawAssetsLerp(
-  matrix: LedMatrixInstance,
-  x: number,
-  y: number,
-  asset1: Asset,
-  asset2: Asset,
-  l: number
-) {
-  const { width, height, data } = asset1;
-
-  const FUCHSIA = [255, 0, 255];
-
-  for (let py = 0; py < height; py++) {
-    for (let px = 0; px < width; px++) {
-      // Calculate index in the data array (3 values per pixel - r,g,b)
-      const idx = (py * width + px) * 3;
-      const r = data[idx];
-      const g = data[idx + 1];
-      const b = data[idx + 2];
-
-      // Skip fuchsia (transparent) pixels
-      if (r === FUCHSIA[0] && g === FUCHSIA[1] && b === FUCHSIA[2]) {
-        continue;
-      }
-
-      const targetX = x + px;
-      const targetY = y + py;
-      if (targetX >= 0 && targetY >= 0) {
-        const c = {
-          r: asset2.data[idx],
-          g: asset2.data[idx + 1],
-          b: asset2.data[idx + 2],
-        };
-        matrix.fgColor(lerp({ r, g, b }, c, l)).setPixel(targetX, targetY);
-      }
-    }
-  }
-
-  return matrix;
+export function colorLuminance(color: RGBAColor): number {
+  const r = color.r / 255;
+  const g = color.g / 255;
+  const b = color.b / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }

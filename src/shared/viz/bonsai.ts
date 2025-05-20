@@ -1,4 +1,10 @@
-import { colorEquals, lerp, vecLength, vecNormalize } from "./helpers.ts";
+import {
+  colorLuminance,
+  colorEquals,
+  lerp,
+  vecLength,
+  vecNormalize,
+} from "./helpers.ts";
 import * as background from "../assets/cherry-blossom-background.ts";
 import * as foliage from "../assets/cherry-blossom-foliage.ts";
 import * as cloud1 from "../assets/cherry-blossom-cloud-1.ts";
@@ -26,15 +32,16 @@ import { LATITUDE, LONGITUDE } from "../config.ts";
 import SunCalc from "suncalc";
 
 import { FlowGrid } from "./flow-grid.ts";
-import { drawAsset, drawAssetsLerp } from "./helpers.ts";
-import type {
-  IVisualization,
-  Color,
-  LedMatrixInstance,
-} from "./visualization-type.ts";
+import {
+  alphaBlend,
+  alphaAdditiveBlend,
+  Backbuffer,
+  RGBAColor,
+} from "../back-buffer.ts";
 import type { IAudioPlayer } from "../audio-player-type.ts";
+import type { IVisualization } from "./visualization-type.ts";
 
-const MAX_STARS = 64;
+const MAX_STARS = 96;
 const MAX_CLOUDS = 4;
 const MIN_CLOUD_SPEED = 0.005;
 const MAX_CLOUD_SPEED = 0.01;
@@ -144,21 +151,21 @@ export default function (width: number, height: number): IVisualization {
 
   // colors
   const dayPalette = {
-    skyBottom: { r: 179, g: 206, b: 191 },
-    skyTop: { r: 98, g: 175, b: 203 },
-    foliageDark: { r: 132, g: 96, b: 99 },
-    foliageMid: { r: 202, g: 104, b: 107 },
-    foliageLight: { r: 227, g: 171, b: 173 },
+    skyBottom: { r: 179, g: 206, b: 191, a: 255 },
+    skyTop: { r: 98, g: 175, b: 203, a: 255 },
+    foliageDark: { r: 132, g: 96, b: 99, a: 255 },
+    foliageMid: { r: 202, g: 104, b: 107, a: 255 },
+    foliageLight: { r: 227, g: 171, b: 173, a: 255 },
     background,
     foliage,
     availableClouds: [cloud1, cloud2, cloud3, cloud4, cloud5],
   };
   const sunxPalette = {
-    skyBottom: { r: 251, g: 66, b: 1 },
-    skyTop: { r: 30, g: 51, b: 100 },
-    foliageDark: { r: 134, g: 60, b: 83 },
-    foliageMid: { r: 233, g: 28, b: 84 },
-    foliageLight: { r: 227, g: 111, b: 142 },
+    skyBottom: { r: 251, g: 66, b: 1, a: 255 },
+    skyTop: { r: 30, g: 51, b: 100, a: 255 },
+    foliageDark: { r: 134, g: 60, b: 83, a: 255 },
+    foliageMid: { r: 233, g: 28, b: 84, a: 255 },
+    foliageLight: { r: 227, g: 111, b: 142, a: 255 },
     background: backgroundSunset,
     foliage: foliageSunset,
     availableClouds: [
@@ -170,11 +177,11 @@ export default function (width: number, height: number): IVisualization {
     ],
   };
   const nightPalette = {
-    skyBottom: { r: 17, g: 45, b: 77 },
-    skyTop: { r: 11, g: 31, b: 36 },
-    foliageDark: { r: 28, g: 37, b: 63 },
-    foliageMid: { r: 27, g: 51, b: 178 },
-    foliageLight: { r: 116, g: 140, b: 228 },
+    skyBottom: { r: 17, g: 45, b: 77, a: 255 },
+    skyTop: { r: 11, g: 31, b: 36, a: 255 },
+    foliageDark: { r: 28, g: 37, b: 63, a: 255 },
+    foliageMid: { r: 27, g: 51, b: 178, a: 255 },
+    foliageLight: { r: 116, g: 140, b: 228, a: 255 },
     background: backgroundNight,
     foliage: foliageNight,
     availableClouds: [
@@ -196,17 +203,17 @@ export default function (width: number, height: number): IVisualization {
     x: number;
     y: number;
     ttl: number;
-    color: Color;
+    color: RGBAColor;
   }> = [];
   const particles: Array<{
     x: number;
     y: number;
-    color: Color;
+    color: RGBAColor;
   }> = [];
   const stars: Array<{
     x: number;
     y: number;
-    color: Color;
+    color: RGBAColor;
   }> = [];
   let prevDate: Date | null = null;
 
@@ -216,7 +223,7 @@ export default function (width: number, height: number): IVisualization {
     name: "Bonsai",
     volume: 12,
     run: (
-      matrix: LedMatrixInstance,
+      backbuffer: Backbuffer,
       audio: IAudioPlayer,
       _dt: number,
       t: number
@@ -304,15 +311,16 @@ export default function (width: number, height: number): IVisualization {
       }
 
       // update clouds
-      for (let i = 0; i < clouds.length; ++i) {
+      for (let i = 0; i < clouds.length; ) {
         const cloud = clouds[i];
         if (cloud.cloud >= 0) {
           cloud.x += cloud.vx;
           if (cloud.x > width) {
             clouds.splice(i, 1);
-            --i;
+            continue;
           }
         }
+        ++i;
       }
       const firstRun = clouds.length === 0;
       while (clouds.length < MAX_CLOUDS) {
@@ -325,7 +333,8 @@ export default function (width: number, height: number): IVisualization {
           const cloud = palette1.availableClouds[index];
           clouds.push({
             cloud: index,
-            x: -cloud.width + (firstRun ? Math.random() * width : 0),
+            x:
+              -cloud.width + (firstRun ? Math.floor(Math.random() * width) : 0),
             y: Math.floor(Math.random() * (height - cloud.height) - 3),
             vx,
           });
@@ -340,31 +349,29 @@ export default function (width: number, height: number): IVisualization {
       }
 
       // update foliage flicker
-      for (let i = 0; i < foliageFlicker.length; ++i) {
+      for (let i = 0; i < foliageFlicker.length; ) {
         const f = foliageFlicker[i];
         --f.ttl;
         if (f.ttl <= 0) {
           foliageFlicker.splice(i, 1);
-          --i;
+          continue;
         }
+        ++i;
       }
       if (foliageFlicker.length < FOLIAGE_ADJUSTMENTS) {
         const additions = FOLIAGE_ADJUSTMENTS - foliageFlicker.length;
         for (let i = 0; i < additions; ++i) {
           const x = Math.floor(Math.random() * (foliage.width - 1));
           const y = Math.floor(Math.random() * (foliage.height - 1));
-          const foliageIndex = (y * foliage.width + x) * 3;
+          const foliageIndex = (y * foliage.width + x) * 4;
           let foliageColor = {
             r: foliage.data[foliageIndex],
             g: foliage.data[foliageIndex + 1],
             b: foliage.data[foliageIndex + 2],
+            a: foliage.data[foliageIndex + 3],
           };
           // check its not transparent
-          if (
-            foliageColor.r !== 255 ||
-            foliageColor.g !== 0 ||
-            foliageColor.b !== 255
-          ) {
+          if (foliageColor.a > 0) {
             if (colorEquals(foliageColor, dayPalette.foliageDark)) {
               foliageColor = lerp(
                 palette1.foliageMid,
@@ -381,11 +388,7 @@ export default function (width: number, height: number): IVisualization {
               foliageColor =
                 Math.random() < 0.5
                   ? lerp(palette1.foliageMid, palette2.foliageMid, paletteLerp)
-                  : lerp(
-                      lerp(palette1.skyBottom, palette2.skyBottom, paletteLerp),
-                      lerp(palette1.skyTop, palette2.skyTop, paletteLerp),
-                      1.0 - (y + 1) / height
-                    );
+                  : { r: 0, g: 0, b: 0, a: 0 };
             }
             foliageFlicker.push({
               x: cx - foliage.width / 2 + x,
@@ -412,105 +415,98 @@ export default function (width: number, height: number): IVisualization {
 
       // update particles
       applyPointAttractors(grid, attractors);
-      for (let i = 0; i < particles.length; ++i) {
+      for (let i = 0; i < particles.length; ) {
         const p = particles[i];
         if (p.y < 0 || p.y >= height || p.x < 0 || p.x >= width) {
           particles.splice(i, 1);
-          --i;
+          continue;
         }
+        ++i;
       }
       if (particles.length < MAX_PARTICLES) {
         const additions = MAX_PARTICLES - particles.length;
         for (let i = 0; i < additions; ++i) {
           const x = Math.floor(Math.random() * (foliage.width - 1));
           const y = Math.floor(Math.random() * (foliage.height - 1));
-          const foliageIndex = (y * foliage.width + x) * 3;
-          let foliageColor = {
-            r: foliage.data[foliageIndex],
-            g: foliage.data[foliageIndex + 1],
-            b: foliage.data[foliageIndex + 2],
-          };
+          const foliageIndex = (y * foliage.width + x) * 4;
           // check its not transparent
-          if (
-            foliageColor.r !== 255 ||
-            foliageColor.g !== 0 ||
-            foliageColor.b !== 255
-          ) {
+          if (foliage.data[foliageIndex + 3] > 0) {
             particles.push({
               x: cx - foliage.width / 2 + x,
               y: y + 1,
-              color: lerp(
-                lerp(palette1.foliageMid, palette2.foliageMid, paletteLerp),
-                lerp(palette1.foliageLight, palette2.foliageLight, paletteLerp),
-                Math.random()
-              ),
+              color: {
+                ...lerp(
+                  lerp(palette1.foliageMid, palette2.foliageMid, paletteLerp),
+                  lerp(
+                    palette1.foliageLight,
+                    palette2.foliageLight,
+                    paletteLerp
+                  ),
+                  Math.random()
+                ),
+                a: 200,
+              },
             });
           }
         }
       }
 
-      matrix.brightness(80).clear();
+      backbuffer.clear();
 
       // draw background
       for (let y = 0; y < height; y++) {
-        matrix
-          .fgColor(
-            lerp(
-              lerp(palette1.skyBottom, palette2.skyBottom, paletteLerp),
-              lerp(palette1.skyTop, palette2.skyTop, paletteLerp),
-              1.0 - (y + 1) / height
-            )
+        backbuffer.drawLine(
+          0,
+          y,
+          width,
+          y,
+          lerp(
+            lerp(palette1.skyBottom, palette2.skyBottom, paletteLerp),
+            lerp(palette1.skyTop, palette2.skyTop, paletteLerp),
+            1.0 - (y + 1) / height
           )
-          .drawLine(0, y, width, y);
+        );
       }
 
       if (palette1 === nightPalette || palette2 === nightPalette) {
         if (stars.length === 0) {
           for (let i = 0; i < MAX_STARS; ++i) {
             stars.push({
-              x: Math.floor(Math.random() * width),
-              y: Math.floor(Math.pow(Math.random(), 2) * height),
+              x: Math.floor(Math.random() * (width - 1)),
+              y: Math.floor(Math.pow(Math.random(), 2) * (height - 1)),
               color: lerp(
                 {
-                  r: 33,
-                  g: 55,
-                  b: 71,
+                  r: 3,
+                  g: 15,
+                  b: 31,
+                  a: 64,
                 },
                 {
-                  r: 88,
-                  g: 99,
-                  b: 108,
+                  r: 38,
+                  g: 49,
+                  b: 58,
+                  a: 128,
                 },
                 Math.random()
               ),
             });
           }
         }
-        const l =
-          palette1 === nightPalette && palette2 !== nightPalette
-            ? 1.0 - paletteLerp
-            : palette1 === nightPalette && palette2 === nightPalette
-            ? 1.0
-            : paletteLerp;
+
         for (let i = 0; i < stars.length; ++i) {
           const star = stars[i];
-          const color = lerp(
-            star.color,
-            lerp(
-              lerp(palette1.skyBottom, palette2.skyBottom, paletteLerp),
-              lerp(palette1.skyTop, palette2.skyTop, paletteLerp),
-              1.0 - (star.y + 1) / height
-            ),
-            Math.pow(star.y / height, l)
-          );
-          matrix.fgColor(color).setPixel(star.x, star.y);
+          const skyPixel = backbuffer.getPixel(star.x, star.y);
+          const skyLuminance = colorLuminance(skyPixel);
+          const starLuminance = colorLuminance(star.color);
+          if (starLuminance > skyLuminance) {
+            backbuffer.setPixel(star.x, star.y, star.color, alphaAdditiveBlend);
+          }
         }
       }
 
       // draw the moon
       if (palette1 === nightPalette && palette2 === nightPalette) {
-        drawAsset(
-          matrix,
+        backbuffer.drawAsset(
           cx + 5 + Math.pow(paletteLerp * 3, 2) * cx,
           height - height * paletteLerp * 3,
           moon
@@ -521,39 +517,37 @@ export default function (width: number, height: number): IVisualization {
       for (let i = 0; i < clouds.length; ++i) {
         const cloud = clouds[i];
         if (cloud.cloud >= 0) {
-          drawAssetsLerp(
-            matrix,
+          backbuffer.drawAsset(
             cloud.x,
             cloud.y,
-            palette1.availableClouds[cloud.cloud],
+            palette1.availableClouds[cloud.cloud]
+          );
+          backbuffer.drawAsset(
+            cloud.x,
+            cloud.y,
             palette2.availableClouds[cloud.cloud],
+            alphaBlend,
             paletteLerp
           );
         }
       }
 
       // draw background
-      drawAssetsLerp(
-        matrix,
-        0,
-        0,
-        palette1.background,
-        palette2.background,
-        paletteLerp
-      );
+      backbuffer.drawAsset(0, 0, palette1.background);
+      backbuffer.drawAsset(0, 0, palette2.background, alphaBlend, paletteLerp);
 
       // draw foliage
-      drawAssetsLerp(
-        matrix,
+      backbuffer.drawAsset(cx - foliage.width / 2, 1, palette1.foliage);
+      backbuffer.drawAsset(
         cx - foliage.width / 2,
         1,
-        palette1.foliage,
         palette2.foliage,
+        alphaBlend,
         paletteLerp
       );
       for (let i = 0; i < foliageFlicker.length; ++i) {
         const f = foliageFlicker[i];
-        matrix.fgColor(f.color).setPixel(f.x, f.y);
+        backbuffer.setPixel(f.x, f.y, f.color);
       }
 
       // draw particles
@@ -562,7 +556,7 @@ export default function (width: number, height: number): IVisualization {
         const vec = grid.getVector(p.x, p.y);
         p.y += vec.y * PARTICLE_FALL_SPEED;
         p.x += vec.x * PARTICLE_FALL_SPEED;
-        matrix.fgColor(p.color).setPixel(Math.floor(p.x), Math.floor(p.y));
+        backbuffer.setPixel(Math.floor(p.x), Math.floor(p.y), p.color);
       }
     },
   };

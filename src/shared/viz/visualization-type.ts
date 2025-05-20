@@ -1,13 +1,12 @@
 import type { IAudioPlayer } from "../audio-player-type.ts";
-import type { LedMatrixInstance } from "rpi-led-matrix";
-export type { Color, LedMatrixInstance } from "rpi-led-matrix";
+import type { Backbuffer } from "../back-buffer.ts";
 
 export interface IVisualization {
   name: string;
   audio?: string;
   volume: number;
   run: (
-    matrix: LedMatrixInstance,
+    backbuffer: Backbuffer,
     audio: IAudioPlayer,
     dt: number,
     t: number
