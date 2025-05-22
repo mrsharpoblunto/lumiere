@@ -58,6 +58,7 @@ const MAX_ATTRACTOR_DISTANCE = 8;
 const ATTRACTOR_STRENGTH = 1;
 const ATTRACTOR_MIN_VELOCITY = 0.02;
 const ATTRACTOR_MAX_VELOCITY = 0.04;
+const BASE_FRAME_TIME = 16;
 
 type AttractorType = {
   x: number;
@@ -225,9 +226,11 @@ export default function (width: number, height: number): IVisualization {
     run: (
       backbuffer: Backbuffer,
       audio: IAudioPlayer,
-      _dt: number,
+      dt: number,
       t: number
     ) => {
+      const speed = dt / BASE_FRAME_TIME;
+
       const now = new Date(t);
       if (!prevDate || now.getDay() !== prevDate.getDay()) {
         // get the time from the middle of the day - suncalc will sometimes
@@ -314,7 +317,7 @@ export default function (width: number, height: number): IVisualization {
       for (let i = 0; i < clouds.length; ) {
         const cloud = clouds[i];
         if (cloud.cloud >= 0) {
-          cloud.x += cloud.vx;
+          cloud.x += cloud.vx * speed;
           if (cloud.x > width) {
             clouds.splice(i, 1);
             continue;
@@ -351,7 +354,7 @@ export default function (width: number, height: number): IVisualization {
       // update foliage flicker
       for (let i = 0; i < foliageFlicker.length; ) {
         const f = foliageFlicker[i];
-        --f.ttl;
+        f.ttl -= speed;
         if (f.ttl <= 0) {
           foliageFlicker.splice(i, 1);
           continue;
@@ -406,7 +409,7 @@ export default function (width: number, height: number): IVisualization {
       // update attractors
       for (let i = 0; i < attractors.length; ++i) {
         const a = attractors[i];
-        a.x += a.dx;
+        a.x += a.dx * speed;
         if (a.x > grid.resolution.x) {
           a.x = 0;
           a.y = Math.random() * FLOW_GRID_RESOLUTION;
@@ -551,8 +554,8 @@ export default function (width: number, height: number): IVisualization {
       for (let i = 0; i < particles.length; ++i) {
         let p = particles[i];
         const vec = grid.getVector(p.x, p.y);
-        p.y += vec.y * PARTICLE_FALL_SPEED;
-        p.x += vec.x * PARTICLE_FALL_SPEED;
+        p.y += vec.y * PARTICLE_FALL_SPEED * speed;
+        p.x += vec.x * PARTICLE_FALL_SPEED * speed;
         backbuffer.fgColor(p.color).setPixel(Math.floor(p.x), Math.floor(p.y));
       }
     },

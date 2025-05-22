@@ -20,11 +20,12 @@ const FISH_COUNT = 2;
 const FISH_VELOCITY = 10;
 const FLOW_GRID_RESOLUTION = 8;
 const BUBBLE_DENSITY = 1;
-const BUBBLE_RISING_SPEED = 0.2;
+const BUBBLE_RISING_SPEED = 0.4;
 const MAX_WAVE_DEPTH = 6;
 const WAVE_STRENGTH = 0.6;
 const WAVE_SPEED = 0.06;
 const ITERATIONS = 1;
+const BASE_FRAME_TIME = 16;
 
 class Movable {
   _x: number;
@@ -617,8 +618,10 @@ export default function (width: number, height: number): IVisualization {
       dt: number,
       _t: number
     ) => {
+      const speed = dt / BASE_FRAME_TIME;
+
       for (let a of attractors) {
-        a.x += a.dx;
+        a.x += a.dx * speed;
         if (a.x > grid.resolution.x + 2 || a.x < -3) {
           a.dx *= -1;
         }
@@ -647,11 +650,11 @@ export default function (width: number, height: number): IVisualization {
             Math.min(width - 1, Math.max(0, b.x)),
             Math.min(height - 1, Math.max(0, b.y))
           );
-          b.x += vec.x;
+          b.x += vec.x * speed;
           if (b.x > width - 1 || b.x < 0) {
             b.x = Math.random() * (width - 1);
           }
-          b.y += vec.y * BUBBLE_RISING_SPEED;
+          b.y += vec.y * BUBBLE_RISING_SPEED * speed;
           if (b.y > maxHeight || b.y < 0) {
             b.y = maxHeight;
             b.x = Math.random() * (width - 1);

@@ -20,8 +20,8 @@ export class FlowGrid {
   }
 
   getVector(x: number, y: number): Vec2 {
-    const ry = Math.floor((y / this.height) * this.resolution.y);
-    const rx = Math.floor((x / this.width) * this.resolution.x);
+    const ry = Math.min(this.height, Math.max(Math.floor((y / this.height) * this.resolution.y), 0));
+    const rx = Math.min(this.width, Math.max(Math.floor((x / this.width) * this.resolution.x), 0));
     return this.vectors[ry * this.resolution.x + rx];
   }
 

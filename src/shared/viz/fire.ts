@@ -10,6 +10,7 @@ const FLOW_GRID_RESOLUTION = 8;
 const MAX_ATTRACTOR_DISTANCE = 6;
 const ATTRACTOR_STRENGTH = 40;
 const ATTRACTOR_JITTER = 0.01;
+const BASE_FRAME_TIME = 16;
 
 type ParticleType = {
   x: number;
@@ -120,10 +121,12 @@ export default function (width: number, height: number): IVisualization {
     name: "Fire",
     audio: "fire.mp3",
     volume: 30,
-    run: (backbuffer, _audio, _dt, _t) => {
+    run: (backbuffer, _audio, dt, _t) => {
+      const speed = dt / BASE_FRAME_TIME;
+
       // cycle the attractor back and forth
       for (let a of attractors) {
-        a.x += a.dx;
+        a.x += a.dx * speed;
         if (Math.random() < ATTRACTOR_JITTER) {
           a.dx *= -1;
         }
@@ -153,12 +156,13 @@ export default function (width: number, height: number): IVisualization {
       backbuffer.blendMode(alphaAdditiveBlend);
       for (let i = 0; i < particles.length; ++i) {
         let p = particles[i];
-        if (++p.age >= p.ttl) {
+        p.age += speed;
+        if (p.age >= p.ttl) {
           genParticle(p);
         }
         const vec = grid.getVector(p.x, p.y);
-        p.y += vec.y;
-        p.x += vec.x;
+        p.y += vec.y * speed;
+        p.x += vec.x * speed;
 
         const l = 1.0 - p.age / p.ttl;
         const size = p.size * l * 0.5;
