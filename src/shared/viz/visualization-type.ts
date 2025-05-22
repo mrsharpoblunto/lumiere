@@ -1,5 +1,5 @@
 import type { IAudioPlayer } from "../audio-player-type.ts";
-import type { Backbuffer } from "../back-buffer.ts";
+import type { Backbuffer } from "./back-buffer.ts";
 
 export interface IVisualization {
   name: string;

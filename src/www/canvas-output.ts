@@ -1,4 +1,4 @@
-import type { IOutput } from "../shared/back-buffer.ts";
+import type { IOutput } from "../shared/viz/back-buffer.ts";
 
 export class CanvasOutput implements IOutput {
   private _ctx: CanvasRenderingContext2D;

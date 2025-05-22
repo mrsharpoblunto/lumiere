@@ -455,17 +455,15 @@ export default function (width: number, height: number): IVisualization {
 
       // draw background
       for (let y = 0; y < height; y++) {
-        backbuffer.drawLine(
-          0,
-          y,
-          width,
-          y,
-          lerp(
-            lerp(palette1.skyBottom, palette2.skyBottom, paletteLerp),
-            lerp(palette1.skyTop, palette2.skyTop, paletteLerp),
-            1.0 - (y + 1) / height
+        backbuffer
+          .fgColor(
+            lerp(
+              lerp(palette1.skyBottom, palette2.skyBottom, paletteLerp),
+              lerp(palette1.skyTop, palette2.skyTop, paletteLerp),
+              1.0 - (y + 1) / height
+            )
           )
-        );
+          .drawLine(0, y, width, y);
       }
 
       if (palette1 === nightPalette || palette2 === nightPalette) {
@@ -493,22 +491,24 @@ export default function (width: number, height: number): IVisualization {
           }
         }
 
+        backbuffer.blendMode(alphaAdditiveBlend);
         for (let i = 0; i < stars.length; ++i) {
           const star = stars[i];
           const skyPixel = backbuffer.getPixel(star.x, star.y);
           const skyLuminance = colorLuminance(skyPixel);
           const starLuminance = colorLuminance(star.color);
           if (starLuminance > skyLuminance) {
-            backbuffer.setPixel(star.x, star.y, star.color, alphaAdditiveBlend);
+            backbuffer.fgColor(star.color).setPixel(star.x, star.y);
           }
         }
       }
 
       // draw the moon
+      backbuffer.blendMode(alphaBlend);
       if (palette1 === nightPalette && palette2 === nightPalette) {
         backbuffer.drawAsset(
           cx + 5 + Math.pow(paletteLerp * 3, 2) * cx,
-          height - height * paletteLerp * 3,
+          height - height * paletteLerp * 3 - 5,
           moon
         );
       }
@@ -522,32 +522,29 @@ export default function (width: number, height: number): IVisualization {
             cloud.y,
             palette1.availableClouds[cloud.cloud]
           );
-          backbuffer.drawAsset(
-            cloud.x,
-            cloud.y,
-            palette2.availableClouds[cloud.cloud],
-            alphaBlend,
-            paletteLerp
-          );
+          backbuffer
+            .blendMode(alphaBlend, paletteLerp)
+            .drawAsset(cloud.x, cloud.y, palette2.availableClouds[cloud.cloud])
+            .blendMode(alphaBlend);
         }
       }
 
       // draw background
       backbuffer.drawAsset(0, 0, palette1.background);
-      backbuffer.drawAsset(0, 0, palette2.background, alphaBlend, paletteLerp);
+      backbuffer
+        .blendMode(alphaBlend, paletteLerp)
+        .drawAsset(0, 0, palette2.background)
+        .blendMode(alphaBlend);
 
       // draw foliage
       backbuffer.drawAsset(cx - foliage.width / 2, 1, palette1.foliage);
-      backbuffer.drawAsset(
-        cx - foliage.width / 2,
-        1,
-        palette2.foliage,
-        alphaBlend,
-        paletteLerp
-      );
+      backbuffer
+        .blendMode(alphaBlend, paletteLerp)
+        .drawAsset(cx - foliage.width / 2, 1, palette2.foliage)
+        .blendMode(alphaBlend);
       for (let i = 0; i < foliageFlicker.length; ++i) {
         const f = foliageFlicker[i];
-        backbuffer.setPixel(f.x, f.y, f.color);
+        backbuffer.fgColor(f.color).setPixel(f.x, f.y);
       }
 
       // draw particles
@@ -556,7 +553,7 @@ export default function (width: number, height: number): IVisualization {
         const vec = grid.getVector(p.x, p.y);
         p.y += vec.y * PARTICLE_FALL_SPEED;
         p.x += vec.x * PARTICLE_FALL_SPEED;
-        backbuffer.setPixel(Math.floor(p.x), Math.floor(p.y), p.color);
+        backbuffer.fgColor(p.color).setPixel(Math.floor(p.x), Math.floor(p.y));
       }
     },
   };

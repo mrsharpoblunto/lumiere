@@ -22,9 +22,8 @@ export function Visualization(props: {
   onUpdateAverageColor?: (color: FastAverageColorResult) => void;
   style?: React.CSSProperties;
   className?: string;
-  [key: string]: any;
 }) {
-  const { viz, audio, ...rest } = props;
+  const { viz, audio, calculateAverageColor, onUpdateAverageColor, className, ...rest } = props;
 
   const canvasRef = React.useRef(null);
   const audioRef = React.useRef(null);
@@ -88,11 +87,11 @@ export function Visualization(props: {
         now = t;
         viz.run(backbuffer, player, dt, t);
         backbuffer.present(output);
-        if (props.calculateAverageColor) {
+        if (calculateAverageColor) {
           fac
             .getColorAsync(canvasRef.current, { algorithm: "dominant" })
             .then((color) => {
-              props.onUpdateAverageColor?.(color);
+              onUpdateAverageColor?.(color);
             });
         }
         pending = window.requestAnimationFrame(render);
@@ -118,7 +117,7 @@ export function Visualization(props: {
         ref={canvasRef}
         width={MATRIX_WIDTH}
         height={MATRIX_HEIGHT}
-        className={`visualization-canvas ${props.className || ""}`}
+        className={`visualization-canvas ${className || ""}`}
       />
       {audio && <audio ref={audioRef} />}
     </>

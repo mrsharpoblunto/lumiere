@@ -1,4 +1,5 @@
 import React from "react";
+import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { FastAverageColorResult } from "fast-average-color";
 import { useVisualizations, Visualization } from "./visualizations.tsx";
@@ -22,20 +23,36 @@ function FullscreenButton({ onClick }: { onClick: (e: any) => void }) {
   );
 }
 
-function VisualizationItem({ viz }: { viz: IVisualization }) {
-  const [_, setHash] = useHash();
-
-  const handleFullscreenClick = (e: React.MouseEvent) => {
-    setHash(viz.name);
-    e.stopPropagation();
-  };
-
+function VisualizationItem({
+  viz,
+  className,
+  onClick,
+}: {
+  viz: IVisualization;
+  className?: string;
+  onClick?: (v: IVisualization) => void;
+}) {
   return (
     <div className="visualization-item">
-      <Visualization viz={viz} />
+      <Visualization
+        viz={viz}
+        className={className}
+        style={
+          {
+            viewTransitionName: `${viz.name}-viz-transition`,
+          } as React.CSSProperties
+        }
+      />
       <div className="visualization-name">{viz.name}</div>
-      <div className="fullscreen-button-container">
-        <FullscreenButton onClick={handleFullscreenClick} />
+      <div
+        className="fullscreen-button-container"
+        style={
+          {
+            viewTransitionName: `${viz.name}-fullscreen-button-transition`,
+          } as React.CSSProperties
+        }
+      >
+        <FullscreenButton onClick={() => onClick?.(viz)} />
       </div>
     </div>
   );
@@ -51,61 +68,95 @@ function VisualizationList() {
     0,
   ]);
 
-  const [hash, _] = useHash();
+  const [hash, setHash] = useHash();
+  const [selectedViz, setSelectedViz] = React.useState(
+    visualizations.find((v) => v.name.toLowerCase() === hash.toLowerCase())
+  );
+  const [previousScrollY, setPreviousScrollY] = React.useState(0);
 
-  const handleMinimize = React.useCallback(() => {
-    window.history.back();
-  }, []);
-
-  const handleUpdateAverageColor = (color: FastAverageColorResult) => {
-    if (containerRef.current) {
-      if (prevColorRef.current) {
-        prevColorRef.current = [
-          prevColorRef.current[0] * (1.0 - AVERAGE_COLOR_BLEND) +
-            color.value[0] * AVERAGE_COLOR_BLEND,
-          prevColorRef.current[1] * (1.0 - AVERAGE_COLOR_BLEND) +
-            color.value[1] * AVERAGE_COLOR_BLEND,
-          prevColorRef.current[2] * (1.0 - AVERAGE_COLOR_BLEND) +
-            color.value[2] * AVERAGE_COLOR_BLEND,
-          prevColorRef.current[3] * (1.0 - AVERAGE_COLOR_BLEND) +
-            color.value[3] * AVERAGE_COLOR_BLEND,
-        ];
-        containerRef.current.style.setProperty(
-          "background-color",
-          `rgba(${prevColorRef.current[0]}, ${prevColorRef.current[1]}, ${prevColorRef.current[2]}, ${prevColorRef.current[3]})`
-        );
-      }
+  React.useEffect(() => {
+    if (!selectedViz) {
+      container?.scrollTo(0, previousScrollY);
     }
-  };
+  }, [previousScrollY, selectedViz]);
 
-  if (hash) {
-    const viz = visualizations.find(
-      (v) => v.name.toLowerCase() === hash.toLowerCase()
-    );
-    if (viz) {
-      return (
-        <div ref={containerRef} className="fullscreen-container">
-          <div className="fullscreen-visualization">
-            <Visualization
-              viz={viz}
-              calculateAverageColor={true}
-              onUpdateAverageColor={handleUpdateAverageColor}
-              audio={true}
-            />
-            <div className="fullscreen-button-container">
-              <FullscreenButton onClick={handleMinimize} />
-            </div>
+  const handleSelect = React.useCallback(
+    (viz: IVisualization | undefined) => {
+      const doSelect = () => {
+        setSelectedViz(viz);
+        setHash(viz?.name || "");
+        if (viz) {
+          setPreviousScrollY(container?.scrollTop || 0);
+        }
+      };
+      if (document.startViewTransition) {
+        document.startViewTransition(() => flushSync(() => doSelect()));
+      } else {
+        doSelect();
+      }
+    },
+    [container, setSelectedViz, setPreviousScrollY]
+  );
+
+  const handleUpdateAverageColor = React.useCallback(
+    (color: FastAverageColorResult) => {
+      if (containerRef.current) {
+        if (prevColorRef.current) {
+          prevColorRef.current = [
+            prevColorRef.current[0] * (1.0 - AVERAGE_COLOR_BLEND) +
+              color.value[0] * AVERAGE_COLOR_BLEND,
+            prevColorRef.current[1] * (1.0 - AVERAGE_COLOR_BLEND) +
+              color.value[1] * AVERAGE_COLOR_BLEND,
+            prevColorRef.current[2] * (1.0 - AVERAGE_COLOR_BLEND) +
+              color.value[2] * AVERAGE_COLOR_BLEND,
+            prevColorRef.current[3] * (1.0 - AVERAGE_COLOR_BLEND) +
+              color.value[3] * AVERAGE_COLOR_BLEND,
+          ];
+          containerRef.current.style.setProperty(
+            "background-color",
+            `rgba(${prevColorRef.current[0]}, ${prevColorRef.current[1]}, ${prevColorRef.current[2]}, ${prevColorRef.current[3]})`
+          );
+        }
+      }
+    },
+    [containerRef, prevColorRef]
+  );
+
+  if (selectedViz) {
+    return (
+      <div ref={containerRef} className="fullscreen-container">
+        <div className="fullscreen-visualization">
+          <Visualization
+            viz={selectedViz}
+            calculateAverageColor={true}
+            onUpdateAverageColor={handleUpdateAverageColor}
+            audio={true}
+            style={
+              {
+                viewTransitionName: `${selectedViz.name}-viz-transition`,
+              } as React.CSSProperties
+            }
+          />
+          <div
+            className="fullscreen-button-container"
+            style={
+              {
+                viewTransitionName: `${selectedViz.name}-fullscreen-button-transition`,
+              } as React.CSSProperties
+            }
+          >
+            <FullscreenButton onClick={() => handleSelect(undefined)} />
           </div>
         </div>
-      );
-    }
+      </div>
+    );
   }
 
   return (
     <>
       <div className="visualization-list">
         {visualizations.map((v) => (
-          <VisualizationItem key={v.name} viz={v} />
+          <VisualizationItem key={v.name} viz={v} onClick={handleSelect} />
         ))}
       </div>
     </>
@@ -150,7 +201,6 @@ function App() {
         .visualization-item {
           width: 100%;
           scroll-snap-align: start;
-          cursor: pointer;
           display: flex;
           position: relative;
           aspect-ratio: 2/1;

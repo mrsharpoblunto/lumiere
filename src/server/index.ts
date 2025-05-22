@@ -26,11 +26,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Configure express and its middleware
-const app: Express & {
-  logger?: winston.Logger;
-  storage?: typeof storage;
-  vizController?: VizController;
-} = express();
+const app: Express = express();
 const port = process.env.PORT || config.APP_SERVER_PORT;
 
 app.enable("trust proxy");
@@ -38,7 +34,7 @@ app.set("port", port);
 app.use(compression());
 
 // configure logging
-app.logger = winston.createLogger({
+app.locals.logger = winston.createLogger({
   format: winston.format.combine(
     winston.format.colorize(),
     winston.format.timestamp(),
@@ -56,7 +52,7 @@ app.use(
   morgan("combined", {
     stream: {
       write: (message: string) => {
-        app.logger?.verbose(message);
+        app.locals.logger?.verbose(message);
       },
     },
   })
@@ -69,7 +65,7 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 // setup storage engine
-app.storage = storage;
+app.locals.storage = storage;
 (async () => {
   await storage.init({
     dir: "persist",
@@ -82,20 +78,14 @@ app.storage = storage;
   } else {
     vizState = { visualization: 0, on: false };
   }
-  app.vizController = new VizController(vizState);
+  app.locals.vizController = new VizController(vizState);
   configureApiRoutes(app);
   configureRoutes(app);
   await startServer(app);
   await startHomekitServer(app);
 })();
 
-function configureRoutes(
-  app: Express & {
-    logger?: winston.Logger;
-    storage?: typeof storage;
-    vizController?: VizController;
-  }
-) {
+function configureRoutes(app: Express) {
   app.use(
     express.static(
       path.join(__dirname, "../../dist/client"),
@@ -108,26 +98,22 @@ function configureRoutes(
   });
 }
 
-async function startHomekitServer(
-  app: Express & { logger?: winston.Logger; vizController?: VizController }
-) {
-  if (!app.vizController) {
-    app.logger?.error("VizController not initialized");
+async function startHomekitServer(app: Express) {
+  if (!app.locals.vizController) {
+    app.locals.logger?.error("VizController not initialized");
     return;
   }
 
-  const accessory = lightAccessory(app.vizController);
+  const accessory = lightAccessory(app.locals.vizController);
   accessory.publish({
     port: config.HOMEKIT_PORT,
     username: config.HOMEKIT_USERNAME,
     pincode: config.HOMEKIT_PINCODE,
   });
-  app.logger?.info("Published HomeKit Accessory Info");
+  app.locals.logger?.info("Published HomeKit Accessory Info");
 }
 
-async function startServer(
-  app: Express & { logger?: winston.Logger }
-): Promise<void> {
+async function startServer(app: Express): Promise<void> {
   return new Promise((resolve, reject) => {
     const server = config.APP_HTTPS
       ? https.createServer(sslConfig(), app)
@@ -135,21 +121,23 @@ async function startServer(
     let started = false;
     server
       .listen(port, () => {
-        app.logger?.info("Express server awaiting connections on port " + port);
+        app.locals.logger?.info(
+          "Express server awaiting connections on port " + port
+        );
         resolve();
         started = true;
       })
       .on("error", (err: NodeJS.ErrnoException) => {
         if (started) {
-          app.logger?.error(err.stack);
+          app.locals.logger?.error(err.stack);
           process.exit(1);
         } else if (err.code === "EACCES") {
-          app.logger?.error(
+          app.locals.logger?.error(
             `Unable to listen on port ${port}. This is usually due to the process not having permissions to bind to this port. Did you mean to run the server in dev mode with a non-priviledged port instead?`
           );
           reject(err);
         } else if (err.code === "EADDRINUSE") {
-          app.logger?.error(
+          app.locals.logger?.error(
             `Unable to listen on port ${port} because another process is already listening on this port. Do you have another instance of the server already running?`
           );
           reject(err);

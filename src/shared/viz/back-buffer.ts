@@ -8,27 +8,27 @@ export type RGBAColor = {
 export interface IOutput {
   width: () => number;
   height: () => number;
-  drawBuffer(buffer: Buffer | Uint8Array, w?: number, h?: number): this;
+  drawBuffer(buffer: Uint8Array, w?: number, h?: number): this;
 }
 
 export type Asset = {
   width: number;
   height: number;
-  data: number[];
+  data: Uint8Array;
 };
 
 type BlendFunc = (
-  srcBuffer: Uint8Array | number[],
+  srcBuffer: Uint8Array,
   srcOffset: number,
-  destBuffer: Uint8Array | number[],
+  destBuffer: Uint8Array,
   destOffset: number,
   blendOp: number
 ) => void;
 
 export function alphaBlend(
-  srcBuffer: Uint8Array | number[],
+  srcBuffer: Uint8Array,
   srcOffset: number,
-  destBuffer: Uint8Array | number[],
+  destBuffer: Uint8Array,
   destOffset: number,
   srcOpacity: number
 ): void {
@@ -50,9 +50,9 @@ export function alphaBlend(
 }
 
 export function alphaAdditiveBlend(
-  srcBuffer: Uint8Array | number[],
+  srcBuffer: Uint8Array,
   srcOffset: number,
-  destBuffer: Uint8Array | number[],
+  destBuffer: Uint8Array,
   destOffset: number,
   srcOpacity: number
 ): void {
@@ -75,44 +75,57 @@ export function alphaAdditiveBlend(
 
 export class Backbuffer {
   private _backbuffer: Uint8Array;
-  private _tmp: Uint8Array;
+  private _color: Uint8Array;
   private _width: number;
   private _height: number;
+  private _blendFunc: BlendFunc | null = null;
+  private _blendOp: number = 1.0;
 
   constructor(width: number, height: number) {
     this._width = width;
     this._height = height;
     this._backbuffer = new Uint8Array(this._width * this._height * 3);
-    this._tmp = new Uint8Array(4);
-
-    for (let i = 0; i < this._width * this._height * 3; i += 3) {
-      this._backbuffer[i] = 0;
-      this._backbuffer[i + 1] = 0;
-      this._backbuffer[i + 2] = 0;
-    }
+    this._color = new Uint8Array(4);
   }
 
-  drawAsset(
-    x0: number,
-    y0: number,
-    asset: Asset,
-    blendFunc: BlendFunc = alphaBlend,
-    blendOp: number = 1.0
-  ): this {
-    for (let y = 0; y < asset.height; y++) {
-      for (let x = 0; x < asset.width; x++) {
-        if (
-          x + x0 < 0 ||
-          x + x0 >= this._width ||
-          y + y0 < 0 ||
-          y + y0 >= this._height
-        ) {
-          continue; // Skip pixels outside the backbuffer
-        }
+  fgColor(color: RGBAColor | [number, number, number, number]): this {
+    if (Array.isArray(color)) {
+      this._color.set(color);
+    } else {
+      this._color[0] = color.r;
+      this._color[1] = color.g;
+      this._color[2] = color.b;
+      this._color[3] = color.a;
+    }
+    return this;
+  }
+
+  blendMode(blendFunc: BlendFunc | null, blendOp: number = 1.0): this {
+    this._blendFunc = blendFunc;
+    this._blendOp = blendOp;
+    return this;
+  }
+
+  drawAsset(x0: number, y0: number, asset: Asset): this {
+    const x0i = Math.floor(x0);
+    const y0i = Math.floor(y0);
+    const minX = Math.max(0, -x0i);
+    const minY = Math.max(0, -y0i);
+    const maxX = Math.min(asset.width + x0i, this._width) - x0i;
+    const maxY = Math.min(asset.height + y0i, this._height) - y0i;
+
+    for (let y = minY; y < maxY; y++) {
+      for (let x = minX; x < maxX; x++) {
         const srcIndex = (y * asset.width + x) * 4;
-        const destIndex = this._getIndex(x + x0, y + y0);
-        if (blendFunc) {
-          blendFunc(asset.data, srcIndex, this._backbuffer, destIndex, blendOp);
+        const destIndex = ((y + y0i) * this._width + x + x0i) * 3;
+        if (this._blendFunc) {
+          this._blendFunc(
+            asset.data,
+            srcIndex,
+            this._backbuffer,
+            destIndex,
+            this._blendOp
+          );
         } else {
           this._backbuffer[destIndex] = asset.data[srcIndex];
           this._backbuffer[destIndex + 1] = asset.data[srcIndex + 1];
@@ -124,14 +137,7 @@ export class Backbuffer {
     return this;
   }
 
-  drawCircle(
-    x: number,
-    y: number,
-    r: number,
-    color: RGBAColor,
-    blendFunc: BlendFunc = alphaBlend,
-    blendOp: number = 1.0
-  ): this {
+  drawCircle(x: number, y: number, r: number): this {
     // Midpoint circle algorithm for pixel-perfect circle
     const xi = Math.floor(x);
     const yi = Math.floor(y);
@@ -142,14 +148,14 @@ export class Backbuffer {
     let decision = 1 - ri;
 
     // Draw initial points in all 8 octants
-    this.setPixel(xi + xPos, yi + yPos, color, blendFunc, blendOp);
-    this.setPixel(xi - xPos, yi + yPos, color, blendFunc, blendOp);
-    this.setPixel(xi + xPos, yi - yPos, color, blendFunc, blendOp);
-    this.setPixel(xi - xPos, yi - yPos, color, blendFunc, blendOp);
-    this.setPixel(xi + yPos, yi + xPos, color, blendFunc, blendOp);
-    this.setPixel(xi - yPos, yi + xPos, color, blendFunc, blendOp);
-    this.setPixel(xi + yPos, yi - xPos, color, blendFunc, blendOp);
-    this.setPixel(xi - yPos, yi - xPos, color, blendFunc, blendOp);
+    this.setPixel(xi + xPos, yi + yPos);
+    this.setPixel(xi - xPos, yi + yPos);
+    this.setPixel(xi + xPos, yi - yPos);
+    this.setPixel(xi - xPos, yi - yPos);
+    this.setPixel(xi + yPos, yi + xPos);
+    this.setPixel(xi - yPos, yi + xPos);
+    this.setPixel(xi + yPos, yi - xPos);
+    this.setPixel(xi - yPos, yi - xPos);
 
     while (xPos < yPos) {
       xPos++;
@@ -163,29 +169,21 @@ export class Backbuffer {
 
       if (xPos <= yPos) {
         // Draw points in all 8 octants
-        this.setPixel(xi + xPos, yi + yPos, color, blendFunc, blendOp);
-        this.setPixel(xi - xPos, yi + yPos, color, blendFunc, blendOp);
-        this.setPixel(xi + xPos, yi - yPos, color, blendFunc, blendOp);
-        this.setPixel(xi - xPos, yi - yPos, color, blendFunc, blendOp);
-        this.setPixel(xi + yPos, yi + xPos, color, blendFunc, blendOp);
-        this.setPixel(xi - yPos, yi + xPos, color, blendFunc, blendOp);
-        this.setPixel(xi + yPos, yi - xPos, color, blendFunc, blendOp);
-        this.setPixel(xi - yPos, yi - xPos, color, blendFunc, blendOp);
+        this.setPixel(xi + xPos, yi + yPos);
+        this.setPixel(xi - xPos, yi + yPos);
+        this.setPixel(xi + xPos, yi - yPos);
+        this.setPixel(xi - xPos, yi - yPos);
+        this.setPixel(xi + yPos, yi + xPos);
+        this.setPixel(xi - yPos, yi + xPos);
+        this.setPixel(xi + yPos, yi - xPos);
+        this.setPixel(xi - yPos, yi - xPos);
       }
     }
 
     return this;
   }
 
-  drawLine(
-    x0: number,
-    y0: number,
-    x1: number,
-    y1: number,
-    color: RGBAColor,
-    blendFunc: BlendFunc = alphaBlend,
-    blendOp: number = 1.0
-  ): this {
+  drawLine(x0: number, y0: number, x1: number, y1: number): this {
     // Bresenham's line algorithm for pixel-perfect line drawing
     let x0i = Math.floor(x0);
     let y0i = Math.floor(y0);
@@ -199,7 +197,7 @@ export class Backbuffer {
     let err = dx + dy;
 
     while (true) {
-      this.setPixel(x0i, y0i, color, blendFunc, blendOp);
+      this.setPixel(x0i, y0i);
 
       if (x0i === x1i && y0i === y1i) break;
 
@@ -219,47 +217,29 @@ export class Backbuffer {
     return this;
   }
 
-  drawRect(
-    x0: number,
-    y0: number,
-    width: number,
-    height: number,
-    color: RGBAColor,
-    blendFunc: BlendFunc = alphaBlend,
-    blendOp: number = 1.0
-  ): this {
-    // Draw the outline of a rectangle using pixel-perfect lines
+  drawRect(x0: number, y0: number, width: number, height: number): this {
     const x0i = Math.floor(x0);
     const y0i = Math.floor(y0);
     const wi = Math.floor(width);
     const hi = Math.floor(height);
 
-    this.drawLine(x0i, y0i, x0i + wi, y0i, color, blendFunc, blendOp);
-    this.drawLine(x0i + wi, y0i, x0i + wi, y0i + hi, color, blendFunc, blendOp);
-    this.drawLine(x0i, y0i + hi, x0i + wi, y0i + hi, color, blendFunc, blendOp);
-    this.drawLine(x0i, y0i, x0i, y0i + hi, color, blendFunc, blendOp);
+    this.drawLine(x0i, y0i, x0i + wi, y0i);
+    this.drawLine(x0i + wi, y0i, x0i + wi, y0i + hi);
+    this.drawLine(x0i, y0i + hi, x0i + wi, y0i + hi);
+    this.drawLine(x0i, y0i, x0i, y0i + hi);
 
     return this;
   }
 
   clear(): this {
-    return this.fill(0, 0, this._width - 1, this._height - 1, {
-      r: 0,
-      g: 0,
-      b: 0,
-      a: 255,
-    });
+    this._backbuffer.fill(0);
+    this._color.fill(0);
+    this._blendFunc = null;
+    this._blendOp = 1.0;
+    return this;
   }
 
-  fill(
-    x0: number,
-    y0: number,
-    x1: number,
-    y1: number,
-    color: RGBAColor,
-    blendFunc: BlendFunc = alphaBlend,
-    blendOp: number = 1.0
-  ): this {
+  fill(x0: number, y0: number, x1: number, y1: number): this {
     // Ensure x0 <= x1 and y0 <= y1 for proper loop execution
     if (x0 > x1) {
       [x0, x1] = [x1, x0]; // Swap x coordinates
@@ -268,9 +248,14 @@ export class Backbuffer {
       [y0, y1] = [y1, y0]; // Swap y coordinates
     }
 
-    for (let y = y0; y <= y1; y++) {
-      for (let x = x0; x <= x1; x++) {
-        this._setPixel(x, y, color, blendFunc, blendOp);
+    const x0i = Math.min(Math.max(0, Math.floor(x0)), this._width);
+    const x1i = Math.min(Math.max(0, Math.floor(x1)), this._width);
+    const y0i = Math.min(Math.max(0, Math.floor(y0)), this._height);
+    const y1i = Math.min(Math.max(0, Math.floor(y1)), this._height);
+
+    for (let y = y0i; y <= y1i; y++) {
+      for (let x = x0i; x <= x1i; x++) {
+        this.setPixel(x, y);
       }
     }
     return this;
@@ -280,7 +265,9 @@ export class Backbuffer {
     if (x < 0 || x >= this._width || y < 0 || y >= this._height) {
       return { r: 0, g: 0, b: 0, a: 0 };
     }
-    const index = this._getIndex(x, y);
+    const xi = Math.floor(x);
+    const yi = Math.floor(y);
+    const index = (yi * this._width + xi) * 3;
     return {
       r: this._backbuffer[index],
       g: this._backbuffer[index + 1],
@@ -289,37 +276,21 @@ export class Backbuffer {
     };
   }
 
-  setPixel(
-    x: number,
-    y: number,
-    color: RGBAColor,
-    blendFunc: BlendFunc = alphaBlend,
-    blendOp: number = 1.0
-  ): this {
-    return this._setPixel(x, y, color, blendFunc, blendOp);
-  }
-
-  _setPixel(
-    x: number,
-    y: number,
-    color: RGBAColor,
-    blendFunc: BlendFunc = alphaBlend,
-    blendOp: number = 1.0
-  ): this {
+  setPixel(x: number, y: number): this {
     if (x < 0 || x >= this._width || y < 0 || y >= this._height) {
       return this;
     }
-    const index = this._getIndex(x, y);
-    this._tmp[0] = color.r;
-    this._tmp[1] = color.g;
-    this._tmp[2] = color.b;
-    this._tmp[3] = color.a;
-    blendFunc(this._tmp, 0, this._backbuffer, index, blendOp);
-    return this;
+    return this._setPixel(Math.floor(x), Math.floor(y));
   }
 
-  _getIndex(x: number, y: number): number {
-    return (Math.floor(x) + Math.floor(y) * this._width) * 3;
+  _setPixel(x: number, y: number): this {
+    const index = (y * this._width + x) * 3;
+    if (this._blendFunc) {
+      this._blendFunc(this._color, 0, this._backbuffer, index, this._blendOp);
+    } else {
+      this._backbuffer.set(this._color.subarray(0, 3), index);
+    }
+    return this;
   }
 
   present(output: IOutput): void {

@@ -10,7 +10,7 @@
     "server": "node src/server/index.ts",
     "dev:client": "vite --port 3001 --mode client",
     "dev:www": "vite --port 3001 --mode www",
-    "build:assets": "node scripts/png-to-mjs.ts",
+    "build:assets": "node scripts/png-to-asset.ts",
     "typecheck": "tsc --noEmit"
   },
   "repository": {

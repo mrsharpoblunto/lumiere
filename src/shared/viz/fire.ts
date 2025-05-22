@@ -1,9 +1,10 @@
 import { lerp, vecLength, vecNormalize } from "./helpers.ts";
 import type { IVisualization } from "./visualization-type.ts";
 import { FlowGrid } from "./flow-grid.ts";
+import { alphaAdditiveBlend } from "./back-buffer.ts";
 
-const MAX_PARTICLES = 64;
-const MAX_SIZE = 10;
+const MAX_PARTICLES = 128;
+const MAX_SIZE = 12;
 const MIN_SIZE = 1;
 const FLOW_GRID_RESOLUTION = 8;
 const MAX_ATTRACTOR_DISTANCE = 6;
@@ -57,7 +58,7 @@ function initParticles(): Array<ParticleType> {
 function genParticle(p: ParticleType): ParticleType {
   p.x = Math.random() * 63;
   p.y = 31;
-  p.ttl = Math.random() * 24;
+  p.ttl = Math.random() * 32;
   p.bright.r = 0.75 + Math.random() * 0.25;
   p.bright.g = 0.15 + Math.random() * 0.25;
   p.bright.b = 0.025 + Math.random() * 0.125;
@@ -119,9 +120,7 @@ export default function (width: number, height: number): IVisualization {
     name: "Fire",
     audio: "fire.mp3",
     volume: 30,
-    run: (backbuffer, audio, dt, t) => {
-      backbuffer.clear();
-
+    run: (backbuffer, _audio, _dt, _t) => {
       // cycle the attractor back and forth
       for (let a of attractors) {
         a.x += a.dx;
@@ -137,6 +136,8 @@ export default function (width: number, height: number): IVisualization {
       }
       applyPointAttractors(grid, attractors);
 
+      backbuffer.clear();
+
       // draw background gradient
       for (let i = height - 1; i >= 0; --i) {
         const c = {
@@ -145,10 +146,11 @@ export default function (width: number, height: number): IVisualization {
           b: 0,
           a: 255,
         };
-        backbuffer.drawLine(0, i, width - 1, i, c);
+        backbuffer.fgColor(c).drawLine(0, i, width - 1, i);
       }
 
       // render particles
+      backbuffer.blendMode(alphaAdditiveBlend);
       for (let i = 0; i < particles.length; ++i) {
         let p = particles[i];
         if (++p.age >= p.ttl) {
@@ -164,13 +166,13 @@ export default function (width: number, height: number): IVisualization {
           r: lerp(p.dim.r, p.bright.r, l) * 255,
           g: lerp(p.dim.g, p.bright.g, l) * 255,
           b: lerp(p.dim.b, p.bright.b, l) * 255,
-          a: 255,
+          a: 128,
         };
 
         backbuffer
-          .fill(p.x - size, p.y - size, p.x + size, p.y + size, color);
+          .fgColor(color)
+          .fill(p.x - size, p.y - size, p.x + size, p.y + size);
       }
-
     },
   };
 }

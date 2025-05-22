@@ -1,4 +1,4 @@
-import type { RGBAColor } from "../back-buffer.ts";
+import type { RGBAColor } from "./back-buffer.ts";
 
 export type Vec2 = {
   x: number;
