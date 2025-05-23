@@ -248,10 +248,14 @@ export class Backbuffer {
       [y0, y1] = [y1, y0]; // Swap y coordinates
     }
 
-    const x0i = Math.min(Math.max(0, Math.floor(x0)), this._width);
-    const x1i = Math.min(Math.max(0, Math.floor(x1)), this._width);
-    const y0i = Math.min(Math.max(0, Math.floor(y0)), this._height);
-    const y1i = Math.min(Math.max(0, Math.floor(y1)), this._height);
+    const x0i = Math.max(0, Math.floor(x0));
+    const x1i = Math.min(this._width - 1, Math.floor(x1));
+    const y0i = Math.max(0, Math.floor(y0));
+    const y1i = Math.min(this._height - 1, Math.floor(y1));
+
+    if (x0i > x1i || y0i > y1i) {
+      return this;
+    }
 
     for (let y = y0i; y <= y1i; y++) {
       for (let x = x0i; x <= x1i; x++) {
