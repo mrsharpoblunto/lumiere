@@ -20,10 +20,19 @@ export function Visualization(props: {
   audio?: boolean;
   calculateAverageColor?: boolean;
   onUpdateAverageColor?: (color: FastAverageColorResult) => void;
+  onAudioNotPermitted?: () => void;
   style?: React.CSSProperties;
   className?: string;
 }) {
-  const { viz, audio, calculateAverageColor, onUpdateAverageColor, className, ...rest } = props;
+  const {
+    viz,
+    audio,
+    calculateAverageColor,
+    onUpdateAverageColor,
+    className,
+    onAudioNotPermitted,
+    ...rest
+  } = props;
 
   const canvasRef = React.useRef(null);
   const audioRef = React.useRef(null);
@@ -69,7 +78,7 @@ export function Visualization(props: {
     );
     const player: IAudioPlayer =
       audio && audioRef.current
-        ? new BrowserAudio(audioRef.current)
+        ? new BrowserAudio(audioRef.current, onAudioNotPermitted)
         : new NullAudio();
     player.volume(viz.volume);
     if (viz.audio) {
@@ -108,7 +117,7 @@ export function Visualization(props: {
         window.cancelAnimationFrame(pending);
       }
     };
-  }, [audio, viz, canvasRef, audioRef, isIntersecting]);
+  }, [audio, viz, canvasRef, audioRef, onAudioNotPermitted, isIntersecting]);
 
   return (
     <>

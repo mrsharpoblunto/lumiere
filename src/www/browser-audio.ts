@@ -11,12 +11,17 @@ export class BrowserAudio implements IAudioPlayer {
   private _audioElement: HTMLAudioElement;
   private _currentFile: string | null;
   private _queuedFile: string | null;
+  private _onAudioNotPermitted?: () => void;
   cleanup: () => void;
 
-  constructor(audioElement: HTMLAudioElement) {
+  constructor(
+    audioElement: HTMLAudioElement,
+    onAudioNotPermitted?: () => void
+  ) {
     this._audioElement = audioElement;
     this._currentFile = null;
     this._queuedFile = null;
+    this._onAudioNotPermitted = onAudioNotPermitted;
 
     const onEnd = () => {
       this._playFile();
@@ -69,7 +74,11 @@ export class BrowserAudio implements IAudioPlayer {
 
     this._audioElement.src = this._currentFile;
 
-    const playPromise = this._audioElement.play();
+    const playPromise = this._audioElement.play().catch((error) => {
+      if (this._onAudioNotPermitted && error.name === 'NotAllowedError') {
+        this._onAudioNotPermitted();
+      }
+    });
 
     // Handle play() promise rejection (autoplay policies may prevent immediate playback)
     if (playPromise !== undefined) {

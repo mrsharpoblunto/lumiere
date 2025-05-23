@@ -46,9 +46,9 @@ function useVizTransitionStyles(vizName: string | undefined) {
   }, [vizName]);
 }
 
-function FullscreenIcon() {
+function FullscreenIcon({ visible }: { visible: boolean }) {
   return (
-    <div className="fullscreen-icon">
+    <div className={`fullscreen-icon ${visible ? "visible" : "hidden"}`}>
       <div className="fullscreen-icon-tl"></div>
       <div className="fullscreen-icon-tr"></div>
       <div className="fullscreen-icon-bl"></div>
@@ -57,8 +57,36 @@ function FullscreenIcon() {
   );
 }
 
-function CloseIcon() {
-  return <div className="close-icon"></div>;
+function CloseButton({
+  visible,
+  onClick,
+}: {
+  visible: boolean;
+  onClick?: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <button
+      className={`close-icon ${visible ? "visible" : "hidden"}`}
+      onClick={onClick}
+      aria-label="Close fullscreen"
+    ></button>
+  );
+}
+
+function EnableAudioButton({
+  visible,
+  onClick,
+}: {
+  visible: boolean;
+  onClick?: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <button
+      className={`enable-audio-icon ${visible ? "visible" : "hidden"}`}
+      onClick={onClick}
+      aria-label="Enable audio"
+    ></button>
+  );
 }
 
 function VisualizationItem({
@@ -72,6 +100,7 @@ function VisualizationItem({
 }) {
   const isMobile = useIsMobile();
   const [isHovered, setIsHovered] = React.useState(false);
+  const [audio, setAudio] = React.useState(isFullscreen);
   const prevColorRef = React.useRef<[number, number, number, number]>([
     0,
     0,
@@ -92,15 +121,18 @@ function VisualizationItem({
           prevColorRef.current[3] * (1.0 - AVERAGE_COLOR_BLEND) +
             color.value[3] * AVERAGE_COLOR_BLEND,
         ];
-        console.log("Update");
         container?.style.setProperty(
           "background-color",
           `rgba(${prevColorRef.current[0]}, ${prevColorRef.current[1]}, ${prevColorRef.current[2]}, ${prevColorRef.current[3]})`
         );
       }
     },
-    [prevColorRef]
+    [container, prevColorRef]
   );
+
+  const handleAudioNotPermitted = React.useCallback(() => {
+    setAudio(false);
+  }, []);
 
   React.useEffect(() => {
     if (isFullscreen) {
@@ -112,6 +144,9 @@ function VisualizationItem({
       };
     }
   }, [isFullscreen]);
+
+  const showFullscreenIcon = !isMobile && !isFullscreen && isHovered;
+  const showEnableAudioButton = isFullscreen && !audio;
 
   return (
     <div
@@ -129,9 +164,10 @@ function VisualizationItem({
           ? {
               calculateAverageColor: true,
               onUpdateAverageColor: handleUpdateAverageColor,
+              onAudioNotPermitted: handleAudioNotPermitted,
             }
           : {})}
-        audio={isFullscreen}
+        audio={audio}
         style={
           {
             viewTransitionName: `${viz.name.toLowerCase()}-viz-transition`,
@@ -150,15 +186,14 @@ function VisualizationItem({
           {viz.name}
         </div>
       )}
-      {!isMobile && !isFullscreen && (
-        <div
-          className={`fullscreen-icon-container ${
-            isHovered ? "fullscreen-icon-pulse" : ""
-          }`}
-        >
-          <FullscreenIcon />
-        </div>
-      )}
+      <FullscreenIcon visible={showFullscreenIcon} />
+      <EnableAudioButton
+        visible={showEnableAudioButton}
+        onClick={(e) => {
+          e.stopPropagation();
+          setAudio(true);
+        }}
+      />
     </div>
   );
 }
@@ -170,19 +205,20 @@ function VisualizationList() {
     visualizations.find((v) => v.name.toLowerCase() === hash.toLowerCase())
   );
   const [previousScrollY, setPreviousScrollY] = React.useState(0);
-  const [showCloseIcon, setShowCloseIcon] = React.useState(true);
+  const [showCloseButton, setShowCloseButton] = React.useState(true);
+  const isMobile = useIsMobile();
 
   useVizTransitionStyles(selected?.name);
 
   React.useEffect(() => {
-    if (!selected) return;
+    if (isMobile || !selected) return;
 
     let timeout: NodeJS.Timeout;
 
     const resetTimeout = () => {
-      setShowCloseIcon(true);
+      setShowCloseButton(true);
       clearTimeout(timeout);
-      timeout = setTimeout(() => setShowCloseIcon(false), 2000);
+      timeout = setTimeout(() => setShowCloseButton(false), 2000);
     };
 
     const handleMouseMove = () => resetTimeout();
@@ -194,7 +230,7 @@ function VisualizationList() {
       clearTimeout(timeout);
       document.removeEventListener("mousemove", handleMouseMove);
     };
-  }, [selected]);
+  }, [isMobile, selected]);
 
   React.useEffect(() => {
     if (!selected) {
@@ -211,8 +247,8 @@ function VisualizationList() {
           setPreviousScrollY(container?.scrollTop || 0);
         }
       };
-      if (document.startViewTransition) {
-        document.startViewTransition(() => flushSync(() => doSelect()));
+      if ((document as any).startViewTransition) {
+        (document as any).startViewTransition(() => flushSync(() => doSelect()));
       } else {
         doSelect();
       }
@@ -226,21 +262,14 @@ function VisualizationList() {
         className="fullscreen-container"
         onClick={() => handleSelect(undefined)}
       >
-        <VisualizationItem
-          viz={selected}
-          isFullscreen={true}
-        />
-        <div
-          className={`close-icon-container ${
-            showCloseIcon ? "visible" : "hidden"
-          }`}
+        <VisualizationItem viz={selected} isFullscreen={true} />
+        <CloseButton
+          visible={showCloseButton}
           onClick={(e) => {
             e.stopPropagation();
             handleSelect(undefined);
           }}
-        >
-          <CloseIcon />
-        </div>
+        />
       </div>
     );
   }
@@ -341,15 +370,20 @@ function App() {
           z-index: 1;
         }
 
-        .fullscreen-icon {
+        .fullscreen-icon,.enable-audio-icon {
           background: rgba(0, 0, 0, 0.5);
           border: none;
           color: white;
           width: 32px;
           height: 32px;
-          padding: 8px;
           cursor: pointer;
-          position: relative;
+          position: absolute;
+          animation: fullscreen-icon-pulse 1.5s ease-in-out infinite;
+          opacity: 0;
+          bottom: 8px;
+          right: 8px;
+          transition: opacity 0.2s ease-in-out;
+          z-index: 20;
         }
 
         .fullscreen-icon-tl {
@@ -396,21 +430,6 @@ function App() {
           background: rgba(0, 0, 0, 0.7);
         }
 
-        .fullscreen-icon-container {
-          position: absolute;
-          bottom: 8px;
-          right: 8px;
-          transition: opacity 0.2s ease-in-out;
-          z-index: 20;
-          pointer-events: none;
-          opacity: 0;
-        }
-
-        .fullscreen-icon-container.fullscreen-icon-pulse {
-          animation: fullscreen-icon-pulse 1.5s ease-in-out infinite;
-          opacity: 1;
-        }
-
         @keyframes fullscreen-icon-pulse {
           0% {
             transform: scale(1);
@@ -436,16 +455,23 @@ function App() {
         }
 
         .close-icon {
+          appearance: none;
           background: rgba(0, 0, 0, 0.5);
           border: none;
           color: white;
           width: 32px;
           height: 32px;
+          margin: 8px;
           display: flex;
           cursor: pointer;
           font-family: 'Pixelify Sans', monospace;
-          font-size: 20px;
+          font-size: 32px;
           font-weight: normal;
+          position: absolute;
+          top: 0;
+          right: 0;
+          z-index: 20;
+          transition: opacity 0.2s ease-in-out;
         }
 
         .close-icon::before {
@@ -457,7 +483,6 @@ function App() {
           text-align: center;
           margin: 0;
           padding: 0;
-          font-size: 24px;
           transform: translateY(-2.5px);
         }
 
@@ -465,19 +490,11 @@ function App() {
           background: rgba(0, 0, 0, 0.7);
         }
 
-        .close-icon-container {
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          z-index: 20;
-          transition: opacity 0.2s ease-in-out;
-        }
-
-        .close-icon-container.visible {
+        .visible {
           opacity: 1;
         }
 
-        .close-icon-container.hidden {
+        .hidden {
           opacity: 0;
         }
       `}</style>
