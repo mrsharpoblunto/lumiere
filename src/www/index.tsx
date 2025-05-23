@@ -188,11 +188,11 @@ function VisualizationList() {
     const handleMouseMove = () => resetTimeout();
 
     resetTimeout();
-    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener("mousemove", handleMouseMove);
 
     return () => {
       clearTimeout(timeout);
-      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener("mousemove", handleMouseMove);
     };
   }, [selected]);
 
@@ -228,13 +228,12 @@ function VisualizationList() {
       >
         <VisualizationItem
           viz={selected}
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
           isFullscreen={true}
         />
         <div
-          className={`close-icon-container ${showCloseIcon ? 'visible' : 'hidden'}`}
+          className={`close-icon-container ${
+            showCloseIcon ? "visible" : "hidden"
+          }`}
           onClick={(e) => {
             e.stopPropagation();
             handleSelect(undefined);
