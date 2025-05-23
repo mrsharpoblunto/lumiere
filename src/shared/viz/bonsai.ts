@@ -36,8 +36,8 @@ import {
   alphaBlend,
   alphaAdditiveBlend,
   Backbuffer,
-  RGBAColor,
 } from "./back-buffer.ts";
+import type { RGBAColor } from "./back-buffer.ts";
 import type { IAudioPlayer } from "../audio-player-type.ts";
 import type { IVisualization } from "./visualization-type.ts";
 
