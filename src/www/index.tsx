@@ -443,7 +443,7 @@ function App() {
           opacity: 0;
           bottom: 8px;
           right: 8px;
-          transition: opacity 0.2s ease-in-out;
+          transition: opacity,background 0.2s ease-in-out;
           z-index: 20;
           display: flex;
           align-items: center;
@@ -490,6 +490,8 @@ function App() {
           border-right: 4px solid #ffffff;
         }
 
+        .fullscreen-icon:hover,
+        .enable-audio-icon:hover,
         .fullscreen-icon:hover {
           background: rgba(0, 0, 0, 0.7);
         }
@@ -535,7 +537,7 @@ function App() {
           top: 0;
           right: 0;
           z-index: 20;
-          transition: opacity 0.2s ease-in-out;
+          transition: opacity,background 0.2s ease-in-out;
         }
 
         .close-icon::before {
@@ -548,10 +550,6 @@ function App() {
           margin: 0;
           padding: 0;
           transform: translateY(-2.5px);
-        }
-
-        .close-icon:hover {
-          background: rgba(0, 0, 0, 0.7);
         }
 
         .visible {
