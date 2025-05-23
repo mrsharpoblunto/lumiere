@@ -145,7 +145,7 @@ Details: https://developer.mozilla.org/en/docs/Web/HTML/CORS_enabled_image`));re
           opacity: 0;
           bottom: 8px;
           right: 8px;
-          transition: opacity 0.2s ease-in-out;
+          transition: opacity,background 0.2s ease-in-out;
           z-index: 20;
           display: flex;
           align-items: center;
@@ -192,6 +192,8 @@ Details: https://developer.mozilla.org/en/docs/Web/HTML/CORS_enabled_image`));re
           border-right: 4px solid #ffffff;
         }
 
+        .fullscreen-icon:hover,
+        .enable-audio-icon:hover,
         .fullscreen-icon:hover {
           background: rgba(0, 0, 0, 0.7);
         }
@@ -237,7 +239,7 @@ Details: https://developer.mozilla.org/en/docs/Web/HTML/CORS_enabled_image`));re
           top: 0;
           right: 0;
           z-index: 20;
-          transition: opacity 0.2s ease-in-out;
+          transition: opacity,background 0.2s ease-in-out;
         }
 
         .close-icon::before {
@@ -250,10 +252,6 @@ Details: https://developer.mozilla.org/en/docs/Web/HTML/CORS_enabled_image`));re
           margin: 0;
           padding: 0;
           transform: translateY(-2.5px);
-        }
-
-        .close-icon:hover {
-          background: rgba(0, 0, 0, 0.7);
         }
 
         .visible {
