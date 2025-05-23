@@ -5,7 +5,7 @@ import { VizController } from "./viz-controller.ts";
 export default function (vizController: VizController): hap.Accessory {
   const accessoryUUID = hap.uuid.generate("hap-nodejs:accessories:fyreplace");
 
-  const light = new hap.Accessory("Fyreplace", accessoryUUID);
+  const light = new hap.Accessory("Lumiere", accessoryUUID);
 
   light
     .getService(hap.Service.AccessoryInformation)!
@@ -19,7 +19,7 @@ export default function (vizController: VizController): hap.Accessory {
   });
 
   light
-    .addService(hap.Service.Lightbulb, "Lumiere")
+    .addService(hap.Service.Lightbulb, "LED screen")
     .getCharacteristic(hap.Characteristic.On)
     .on(
       "set",

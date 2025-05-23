@@ -11,6 +11,7 @@
     "dev:client": "vite --port 3001 --mode client",
     "dev:www": "vite --port 3001 --mode www",
     "build:assets": "node scripts/png-to-asset.ts",
+    "watch:assets": "chokidar 'assets/*.png' -c 'npm run build:assets'",
     "typecheck": "tsc --noEmit"
   },
   "repository": {
@@ -52,6 +53,7 @@
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@types/suncalc": "^1.9.2",
+    "chokidar-cli": "^3.0.0",
     "fast-average-color": "^9.5.0",
     "prettier": "^2.2.0",
     "react": "^19.1.0",

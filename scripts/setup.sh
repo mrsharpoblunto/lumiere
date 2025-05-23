@@ -42,3 +42,7 @@ cwd=$(pwd)
 sed -i.bak 's|CWD|'"$cwd"'|g' /etc/systemd/system/lumiere.service
 rm /etc/systemd/system/lumiere.service.bak
 systemctl enable lumiere
+
+# add cron job to check for updates every 15 minutes
+cron_job="*/15 * * * * cd $cwd && ./scripts/update.sh >> /var/log/lumiere-update.log 2>&1"
+(crontab -l 2>/dev/null | grep -v "lumiere"; echo "$cron_job") | crontab -

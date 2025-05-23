@@ -511,7 +511,7 @@ export default function (width: number, height: number): IVisualization {
       if (palette1 === nightPalette && palette2 === nightPalette) {
         backbuffer.drawAsset(
           cx + 5 + Math.pow(paletteLerp * 3, 2) * cx,
-          height - height * paletteLerp * 3 - 5,
+          height - height * paletteLerp * 3,
           moon
         );
       }
