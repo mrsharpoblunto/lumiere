@@ -57,6 +57,10 @@ function FullscreenIcon() {
   );
 }
 
+function CloseIcon() {
+  return <div className="close-icon"></div>;
+}
+
 function VisualizationItem({
   viz,
   onClick,
@@ -134,11 +138,18 @@ function VisualizationItem({
           } as React.CSSProperties
         }
       />
-      {!isFullscreen && <div className="visualization-name"
-          style={{
-            viewTransitionName: `${viz.name.toLowerCase()}-viz-name-transition`,
-          } as React.CSSProperties}
-        >{viz.name}</div>}
+      {!isFullscreen && (
+        <div
+          className="visualization-name"
+          style={
+            {
+              viewTransitionName: `${viz.name.toLowerCase()}-viz-name-transition`,
+            } as React.CSSProperties
+          }
+        >
+          {viz.name}
+        </div>
+      )}
       {!isMobile && !isFullscreen && (
         <div
           className={`fullscreen-icon-container ${
@@ -159,8 +170,31 @@ function VisualizationList() {
     visualizations.find((v) => v.name.toLowerCase() === hash.toLowerCase())
   );
   const [previousScrollY, setPreviousScrollY] = React.useState(0);
+  const [showCloseIcon, setShowCloseIcon] = React.useState(true);
 
   useVizTransitionStyles(selected?.name);
+
+  React.useEffect(() => {
+    if (!selected) return;
+
+    let timeout: NodeJS.Timeout;
+
+    const resetTimeout = () => {
+      setShowCloseIcon(true);
+      clearTimeout(timeout);
+      timeout = setTimeout(() => setShowCloseIcon(false), 2000);
+    };
+
+    const handleMouseMove = () => resetTimeout();
+
+    resetTimeout();
+    document.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      clearTimeout(timeout);
+      document.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [selected]);
 
   React.useEffect(() => {
     if (!selected) {
@@ -188,12 +222,26 @@ function VisualizationList() {
 
   if (selected) {
     return (
-      <div className="fullscreen-container">
+      <div
+        className="fullscreen-container"
+        onClick={() => handleSelect(undefined)}
+      >
         <VisualizationItem
           viz={selected}
-          onClick={() => handleSelect(undefined)}
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
           isFullscreen={true}
         />
+        <div
+          className={`close-icon-container ${showCloseIcon ? 'visible' : 'hidden'}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleSelect(undefined);
+          }}
+        >
+          <CloseIcon />
+        </div>
       </div>
     );
   }
@@ -386,6 +434,52 @@ function App() {
           align-items: center;
           justify-content: center;
           z-index: 5;
+        }
+
+        .close-icon {
+          background: rgba(0, 0, 0, 0.5);
+          border: none;
+          color: white;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          cursor: pointer;
+          font-family: 'Pixelify Sans', monospace;
+          font-size: 20px;
+          font-weight: normal;
+        }
+
+        .close-icon::before {
+          content: 'x';
+          display: block;
+          width: 100%;
+          height: 100%;
+          line-height: 32px;
+          text-align: center;
+          margin: 0;
+          padding: 0;
+          font-size: 24px;
+          transform: translateY(-2.5px);
+        }
+
+        .close-icon:hover {
+          background: rgba(0, 0, 0, 0.7);
+        }
+
+        .close-icon-container {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          z-index: 20;
+          transition: opacity 0.2s ease-in-out;
+        }
+
+        .close-icon-container.visible {
+          opacity: 1;
+        }
+
+        .close-icon-container.hidden {
+          opacity: 0;
         }
       `}</style>
       <VisualizationList />
