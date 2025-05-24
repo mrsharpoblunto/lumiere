@@ -28,7 +28,6 @@ import * as cloud4Sunset from "../assets/cherry-blossom-cloud-4-sunset.ts";
 import * as cloud5Sunset from "../assets/cherry-blossom-cloud-5-sunset.ts";
 import * as moon from "../assets/moon.ts";
 
-import { LATITUDE, LONGITUDE } from "../config.ts";
 import SunCalc from "suncalc";
 
 import { FlowGrid } from "./flow-grid.ts";
@@ -39,6 +38,10 @@ import {
 } from "./back-buffer.ts";
 import type { RGBAColor } from "./back-buffer.ts";
 import type { IAudioPlayer } from "../audio-player-type.ts";
+import type {
+  ILocationService,
+  GeoLocationCoordinates,
+} from "../location-service-type.ts";
 import type { IVisualization } from "./visualization-type.ts";
 
 const MAX_STARS = 96;
@@ -217,6 +220,7 @@ export default function (width: number, height: number): IVisualization {
     color: RGBAColor;
   }> = [];
   let prevDate: Date | null = null;
+  let prevLocation: GeoLocationCoordinates | null = null;
 
   let day: SunInfo | null = null;
 
@@ -226,19 +230,26 @@ export default function (width: number, height: number): IVisualization {
     run: (
       backbuffer: Backbuffer,
       audio: IAudioPlayer,
+      location: ILocationService,
       dt: number,
       t: number
     ) => {
       const speed = dt / BASE_FRAME_TIME;
 
       const now = new Date(t);
-      if (!prevDate || now.getDay() !== prevDate.getDay()) {
+      if (
+        !prevDate ||
+        now.getDay() !== prevDate.getDay() ||
+        prevLocation?.latitude !== location.getLocation().latitude ||
+        prevLocation?.longitude !== location.getLocation().longitude
+      ) {
         // get the time from the middle of the day - suncalc will sometimes
         // return the wrong day if we are close to midnight
+        prevLocation = location.getLocation();
         const times = SunCalc.getTimes(
           new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0),
-          LATITUDE,
-          LONGITUDE
+          prevLocation.latitude,
+          prevLocation.longitude
         );
         if (times.sunrise.getDay() === now.getDay()) {
           const sunRiseStart = times.sunrise.getTime();

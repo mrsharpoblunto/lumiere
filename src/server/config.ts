@@ -39,5 +39,8 @@ export const VOLUME_COMMAND = "amixer set Master";
 export const AUDIO_COMMAND = "mpg123";
 export const AUDIO_ARGS = ["-q"];
 
+export const LATITUDE = 37.563;
+export const LONGITUDE = -122.3255;
+
 export const SSL_KEY = path.join(__dirname, "../../ssl/server.key");
 export const SSL_CERT = path.join(__dirname, "../../ssl/server.crt");

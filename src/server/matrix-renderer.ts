@@ -6,6 +6,7 @@ import type { IVisualization } from "../shared/viz/visualization-type.ts";
 import { MATRIX_WIDTH, MATRIX_HEIGHT } from "../shared/config.ts";
 import type { IAudioPlayer } from "../shared/audio-player-type.ts";
 import { Backbuffer } from "../shared/viz/back-buffer.ts";
+import { ServerLocationService } from "./location-service.ts";
 
 interface MatrixState {
   visualization: number;
@@ -39,6 +40,7 @@ class MatrixRenderer {
   rl: readline.Interface;
   audioPlayer: IAudioPlayer;
   backbuffer: Backbuffer;
+  locationService: ServerLocationService;
 
   constructor(initialState: MatrixState) {
     this.matrix = new M.LedMatrix(
@@ -65,6 +67,7 @@ class MatrixRenderer {
       this.matrix.height()
     );
     this.audioPlayer = new AudioPlayerProxy();
+    this.locationService = new ServerLocationService();
 
     this.rl = readline.createInterface({
       input: process.stdin,
@@ -137,7 +140,7 @@ class MatrixRenderer {
 
   _afterSync(_matrix: LedMatrixInstance, dt: number, _t: number): void {
     const viz = this.visualizations[this.state.visualization];
-    viz.run(this.backbuffer, this.audioPlayer, dt, new Date().getTime());
+    viz.run(this.backbuffer, this.audioPlayer, this.locationService, dt, new Date().getTime());
     this.backbuffer.present(this.matrix);
     this.activeTimeout = setTimeout(() => {
       if (this.state.on) {

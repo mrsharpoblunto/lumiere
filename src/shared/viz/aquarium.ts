@@ -3,6 +3,7 @@ import { lerp, mul, vecLength, vecNormalize } from "./helpers.ts";
 import type { IVisualization } from "./visualization-type.ts";
 import { FlowGrid } from "./flow-grid.ts";
 import type { IAudioPlayer } from "../audio-player-type.ts";
+import type { ILocationService } from "../location-service-type.ts";
 import type { Backbuffer, RGBAColor } from "./back-buffer.ts";
 import { alphaBlend } from "./back-buffer.ts";
 
@@ -615,6 +616,7 @@ export default function (width: number, height: number): IVisualization {
     run: (
       backbuffer: Backbuffer,
       _audio: IAudioPlayer,
+      _location: ILocationService,
       dt: number,
       _t: number
     ) => {

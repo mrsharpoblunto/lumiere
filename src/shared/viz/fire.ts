@@ -121,7 +121,7 @@ export default function (width: number, height: number): IVisualization {
     name: "Fire",
     audio: "fire.mp3",
     volume: 30,
-    run: (backbuffer, _audio, dt, _t) => {
+    run: (backbuffer, _audio, _location, dt, _t) => {
       const speed = dt / BASE_FRAME_TIME;
 
       // cycle the attractor back and forth

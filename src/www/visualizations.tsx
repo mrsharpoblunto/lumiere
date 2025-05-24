@@ -5,6 +5,7 @@ import { Backbuffer } from "../shared/viz/back-buffer.ts";
 import { IAudioPlayer } from "../shared/audio-player-type.ts";
 import { CanvasOutput } from "./canvas-output.ts";
 import { BrowserAudio, NullAudio } from "./browser-audio.ts";
+import { BrowserLocationService } from "./browser-location-service.ts";
 import { FastAverageColor, FastAverageColorResult } from "fast-average-color";
 import React from "react";
 
@@ -80,6 +81,7 @@ export function Visualization(props: {
       audio && audioRef.current
         ? new BrowserAudio(audioRef.current, onAudioNotPermitted)
         : new NullAudio();
+    const locationService = new BrowserLocationService();
     player.volume(viz.volume);
     if (viz.audio) {
       player.play(viz.audio);
@@ -94,7 +96,7 @@ export function Visualization(props: {
         const t = new Date().getTime();
         const dt = t - now;
         now = t;
-        viz.run(backbuffer, player, dt, t);
+        viz.run(backbuffer, player, locationService, dt, t);
         backbuffer.present(output);
         if (calculateAverageColor) {
           fac
