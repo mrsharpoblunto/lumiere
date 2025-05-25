@@ -31,11 +31,7 @@ import * as moon from "../assets/moon.ts";
 import SunCalc from "suncalc";
 
 import { FlowGrid } from "./flow-grid.ts";
-import {
-  alphaBlend,
-  alphaAdditiveBlend,
-  Backbuffer,
-} from "./back-buffer.ts";
+import { alphaBlend, alphaAdditiveBlend, Backbuffer } from "./back-buffer.ts";
 import type { RGBAColor } from "./back-buffer.ts";
 import type { IAudioPlayer } from "../audio-player-type.ts";
 import type {
@@ -221,6 +217,7 @@ export default function (width: number, height: number): IVisualization {
   }> = [];
   let prevDate: Date | null = null;
   let prevLocation: GeoLocationCoordinates | null = null;
+  let phase = 0.0;
 
   let day: SunInfo | null = null;
 
@@ -234,6 +231,8 @@ export default function (width: number, height: number): IVisualization {
       dt: number,
       t: number
     ) => {
+      // TODO remove
+      t += 3000000;
       const speed = dt / BASE_FRAME_TIME;
 
       const now = new Date(t);
@@ -246,11 +245,20 @@ export default function (width: number, height: number): IVisualization {
         // get the time from the middle of the day - suncalc will sometimes
         // return the wrong day if we are close to midnight
         prevLocation = location.getLocation();
+        const midday = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          12,
+          0,
+          0
+        );
         const times = SunCalc.getTimes(
-          new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0),
+          midday,
           prevLocation.latitude,
           prevLocation.longitude
         );
+        phase = SunCalc.getMoonIllumination(midday).phase;
         if (times.sunrise.getDay() === now.getDay()) {
           const sunRiseStart = times.sunrise.getTime();
           const sunRiseEnd = times.goldenHourEnd.getTime();
@@ -517,17 +525,56 @@ export default function (width: number, height: number): IVisualization {
         }
       }
 
+      const mcx = moon.width / 2;
+      const mcy = moon.height / 2;
+      const moonPosition = {
+        x: mcx + cx + 5 + Math.pow(paletteLerp * 3, 2) * cx,
+        y: mcy + height - height * paletteLerp * 3,
+      };
+
+      // TODO remove
+      phase = 0.0;
+
+      const moonPhaseBlend = (() => (
+        srcBuffer: Uint8Array,
+        srcOffset: number,
+        destBuffer: Uint8Array,
+        destOffset: number,
+        blendOp: number,
+        x: number,
+        y: number
+      ) => {
+        let waxing = phase <= 0.5;
+        // always -1 -> 1
+        const capturedPhase = 1.0 - (phase - (waxing ? 0 : 0.5)) * 4;
+        // always 1 -> -1
+        const cresent = Math.abs((y / (moon.height - 1)) * 2 - 1);
+        const behindCresent =
+          x < mcx + Math.pow(1.0 - cresent, 0.5) * capturedPhase * mcx;
+        if (behindCresent !== waxing) {
+          // show the lit moon
+          alphaBlend(srcBuffer, srcOffset, destBuffer, destOffset, blendOp);
+        } else if (srcBuffer[srcOffset + 3] > 0) {
+          // show the occluded moon
+          destBuffer[destOffset] *= 0.9;
+          destBuffer[destOffset + 1] *= 0.9;
+          destBuffer[destOffset + 2] *= 0.9;
+        }
+      })();
+
       // draw the moon
-      backbuffer.blendMode(alphaBlend);
       if (palette1 === nightPalette && palette2 === nightPalette) {
-        backbuffer.drawAsset(
-          cx + 5 + Math.pow(paletteLerp * 3, 2) * cx,
-          height - height * paletteLerp * 3,
-          moon
-        );
+        backbuffer.blendMode(moonPhaseBlend, 1.0);
+        backbuffer.drawAsset(moonPosition.x - mcx, moonPosition.y - mcy, moon);
+        //  TODO remove
+        backbuffer.blendMode(alphaBlend);
+        backbuffer
+          .fgColor([2555, 255, 255, 255])
+          .drawCircle(moonPosition.x, moonPosition.y, mcx);
       }
 
       // draw clouds
+      backbuffer.blendMode(alphaBlend);
       for (let i = 0; i < clouds.length; ++i) {
         const cloud = clouds[i];
         if (cloud.cloud >= 0) {

@@ -22,7 +22,9 @@ type BlendFunc = (
   srcOffset: number,
   destBuffer: Uint8Array,
   destOffset: number,
-  blendOp: number
+  blendOp: number,
+  x: number,
+  y: number
 ) => void;
 
 export function alphaBlend(
@@ -124,7 +126,9 @@ export class Backbuffer {
             srcIndex,
             this._backbuffer,
             destIndex,
-            this._blendOp
+            this._blendOp,
+            x,
+            y
           );
         } else {
           this._backbuffer[destIndex] = asset.data[srcIndex];
@@ -290,7 +294,7 @@ export class Backbuffer {
   _setPixel(x: number, y: number): this {
     const index = (y * this._width + x) * 3;
     if (this._blendFunc) {
-      this._blendFunc(this._color, 0, this._backbuffer, index, this._blendOp);
+      this._blendFunc(this._color, 0, this._backbuffer, index, this._blendOp, x, y);
     } else {
       this._backbuffer.set(this._color.subarray(0, 3), index);
     }
