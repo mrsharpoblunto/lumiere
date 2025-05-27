@@ -127,8 +127,8 @@ export class Backbuffer {
             this._backbuffer,
             destIndex,
             this._blendOp,
-            x,
-            y
+            x + x0i,
+            y + y0i
           );
         } else {
           this._backbuffer[destIndex] = asset.data[srcIndex];
@@ -263,7 +263,7 @@ export class Backbuffer {
 
     for (let y = y0i; y <= y1i; y++) {
       for (let x = x0i; x <= x1i; x++) {
-        this.setPixel(x, y);
+        this._setPixel(x, y);
       }
     }
     return this;
@@ -294,7 +294,15 @@ export class Backbuffer {
   _setPixel(x: number, y: number): this {
     const index = (y * this._width + x) * 3;
     if (this._blendFunc) {
-      this._blendFunc(this._color, 0, this._backbuffer, index, this._blendOp, x, y);
+      this._blendFunc(
+        this._color,
+        0,
+        this._backbuffer,
+        index,
+        this._blendOp,
+        x,
+        y
+      );
     } else {
       this._backbuffer.set(this._color.subarray(0, 3), index);
     }

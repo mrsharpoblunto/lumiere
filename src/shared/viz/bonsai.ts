@@ -231,8 +231,6 @@ export default function (width: number, height: number): IVisualization {
       dt: number,
       t: number
     ) => {
-      // TODO remove
-      t += 3000000;
       const speed = dt / BASE_FRAME_TIME;
 
       const now = new Date(t);
@@ -263,7 +261,7 @@ export default function (width: number, height: number): IVisualization {
           const sunRiseStart = times.sunrise.getTime();
           const sunRiseEnd = times.goldenHourEnd.getTime();
           const sunSetStart = times.sunsetStart.getTime();
-          const sunSetEnd = times.night.getTime();
+          const sunSetEnd = times.sunset.getTime();
           day = {
             sunRiseStart,
             sunRiseEnd,
@@ -525,15 +523,15 @@ export default function (width: number, height: number): IVisualization {
         }
       }
 
-      const mcx = moon.width / 2;
-      const mcy = moon.height / 2;
+      const moonWidth = 13;
+      const moonHeight = 13;
+      const mcx = moonWidth / 2;
+      const mcy = moonHeight / 2;
+      const r2 = Math.pow(mcx, 2);
       const moonPosition = {
-        x: mcx + cx + 5 + Math.pow(paletteLerp * 3, 2) * cx,
-        y: mcy + height - height * paletteLerp * 3,
+        x: Math.round(cx + 5 + Math.pow(paletteLerp * 3, 2) * cx),
+        y: Math.round(height - height * paletteLerp * 3),
       };
-
-      // TODO remove
-      phase = 0.0;
 
       const moonPhaseBlend = (() => (
         srcBuffer: Uint8Array,
@@ -544,33 +542,40 @@ export default function (width: number, height: number): IVisualization {
         x: number,
         y: number
       ) => {
-        let waxing = phase <= 0.5;
-        // always -1 -> 1
-        const capturedPhase = 1.0 - (phase - (waxing ? 0 : 0.5)) * 4;
-        // always 1 -> -1
-        const cresent = Math.abs((y / (moon.height - 1)) * 2 - 1);
+        const relX = x - moonPosition.x;
+        const relY = y - moonPosition.y;
+
+        const waxing = phase <= 0.5;
+        const capturedPhase = 1.0 - (phase - (waxing ? 0 : 0.5)) * 4; // -1 -> 1 repeating
+        const cresent = 1.0 - Math.abs((relY / moonHeight) * 2); // 0 -> 1 -> 0
         const behindCresent =
-          x < mcx + Math.pow(1.0 - cresent, 0.5) * capturedPhase * mcx;
-        if (behindCresent !== waxing) {
-          // show the lit moon
-          alphaBlend(srcBuffer, srcOffset, destBuffer, destOffset, blendOp);
-        } else if (srcBuffer[srcOffset + 3] > 0) {
-          // show the occluded moon
-          destBuffer[destOffset] *= 0.9;
-          destBuffer[destOffset + 1] *= 0.9;
-          destBuffer[destOffset + 2] *= 0.9;
+          relX <= Math.pow(cresent, 0.5) * capturedPhase * (mcx + 2);
+
+        const dist2 = Math.pow(relX, 2) + Math.pow(relY, 2);
+        let mul = 1.0;
+        if (dist2 > r2) {
+          mul = 0;
+        } else if (behindCresent === waxing) {
+          mul = 0.1;
+        } else if (dist2 > r2 - 7) {
+          mul = 0.4;
         }
+
+        alphaBlend(srcBuffer, srcOffset, destBuffer, destOffset, blendOp * mul);
       })();
 
       // draw the moon
       if (palette1 === nightPalette && palette2 === nightPalette) {
         backbuffer.blendMode(moonPhaseBlend, 1.0);
-        backbuffer.drawAsset(moonPosition.x - mcx, moonPosition.y - mcy, moon);
-        //  TODO remove
-        backbuffer.blendMode(alphaBlend);
         backbuffer
           .fgColor([2555, 255, 255, 255])
-          .drawCircle(moonPosition.x, moonPosition.y, mcx);
+          .fill(
+            moonPosition.x - mcx,
+            moonPosition.y - mcy,
+            moonPosition.x + mcx,
+            moonPosition.y + mcy
+          );
+        //.drawAsset(moonPosition.x - mcx, moonPosition.y - mcy, moon);
       }
 
       // draw clouds
