@@ -42,8 +42,13 @@ async function processPngFile(filename: string): Promise<void> {
     const { data } = await image.raw().toBuffer({ resolveWithObject: true });
 
     const rgbArray: number[] = [];
-    for (let i = 0; i < data.length; i += 4) {
-      rgbArray.push(data[i], data[i + 1], data[i + 2], data[i + 3]);
+    for (let i = 0; i < data.length; i += metadata.hasAlpha ? 4 : 3) {
+      rgbArray.push(
+        data[i],
+        data[i + 1],
+        data[i + 2],
+        metadata.hasAlpha ? data[i + 3] : 255
+      );
     }
 
     // Create TypeScript content with named exports

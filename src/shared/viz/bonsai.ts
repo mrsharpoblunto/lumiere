@@ -523,59 +523,56 @@ export default function (width: number, height: number): IVisualization {
         }
       }
 
-      const moonWidth = 13;
-      const moonHeight = 13;
-      const mcx = moonWidth / 2;
-      const mcy = moonHeight / 2;
-      const r2 = Math.pow(mcx, 2);
-      const moonPosition = {
-        x: Math.round(cx + 5 + Math.pow(paletteLerp * 3, 2) * cx),
-        y: Math.round(height - height * paletteLerp * 3),
-      };
-
-      const moonPhaseBlend = (() => (
-        srcBuffer: Uint8Array,
-        srcOffset: number,
-        destBuffer: Uint8Array,
-        destOffset: number,
-        blendOp: number,
-        x: number,
-        y: number
-      ) => {
-        const relX = x - moonPosition.x;
-        const relY = y - moonPosition.y;
-
-        const waxing = phase <= 0.5;
-        const capturedPhase = 1.0 - (phase - (waxing ? 0 : 0.5)) * 4; // -1 -> 1 repeating
-        const cresent = 1.0 - Math.abs((relY / moonHeight) * 2); // 0 -> 1 -> 0
-        const behindCresent =
-          relX <= Math.pow(cresent, 0.5) * capturedPhase * (mcx + 2);
-
-        const dist2 = Math.pow(relX, 2) + Math.pow(relY, 2);
-        let mul = 1.0;
-        if (dist2 > r2) {
-          mul = 0;
-        } else if (behindCresent === waxing) {
-          mul = 0.1;
-        } else if (dist2 > r2 - 7) {
-          mul = 0.4;
-        }
-
-        alphaBlend(srcBuffer, srcOffset, destBuffer, destOffset, blendOp * mul);
-      })();
-
       // draw the moon
       if (palette1 === nightPalette && palette2 === nightPalette) {
-        backbuffer.blendMode(moonPhaseBlend, 1.0);
+        const mcx = moon.width / 2;
+        const mcy = moon.height / 2;
+        const r2 = Math.pow(mcx, 2);
+        const moonPosition = {
+          x: Math.round(mcx + cx + 5 + Math.pow(paletteLerp * 3, 2) * cx),
+          y: Math.round(height - height * paletteLerp * 3),
+        };
+
         backbuffer
-          .fgColor([2555, 255, 255, 255])
-          .fill(
-            moonPosition.x - mcx,
-            moonPosition.y - mcy,
-            moonPosition.x + mcx,
-            moonPosition.y + mcy
-          );
-        //.drawAsset(moonPosition.x - mcx, moonPosition.y - mcy, moon);
+          .blendMode(
+            (
+              srcBuffer: Uint8Array,
+              srcOffset: number,
+              destBuffer: Uint8Array,
+              destOffset: number,
+              blendOp: number,
+              x: number,
+              y: number
+            ) => {
+              const relX = x - moonPosition.x + 1;
+              const relY = y - moonPosition.y + 1;
+
+              const waxing = phase <= 0.5;
+              const capturedPhase = 1.0 - (phase - (waxing ? 0 : 0.5)) * 4; // -1 -> 1 repeating
+              const cresent = 1.0 - Math.abs((relY / moon.height) * 2); // 0 -> 1 -> 0
+              const behindCresent =
+                relX <= Math.pow(cresent, 0.5) * capturedPhase * (mcx + 2);
+
+              const dist2 = Math.pow(relX, 2) + Math.pow(relY, 2);
+              let mul = 1.0;
+              if (dist2 > r2) {
+                mul = 0;
+              } else if (behindCresent === waxing) {
+                mul = 0.1;
+              } else if (dist2 > r2 - 7) {
+                mul = 0.4;
+              }
+
+              alphaBlend(
+                srcBuffer,
+                srcOffset,
+                destBuffer,
+                destOffset,
+                blendOp * mul
+              );
+            }
+          )
+          .drawAsset(moonPosition.x - mcx, moonPosition.y - mcy, moon);
       }
 
       // draw clouds
