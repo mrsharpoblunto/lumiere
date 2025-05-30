@@ -549,9 +549,8 @@ export default function (width: number, height: number): IVisualization {
 
               const waxing = phase <= 0.5;
               const capturedPhase = 1.0 - (phase - (waxing ? 0 : 0.5)) * 4; // -1 -> 1 repeating
-              const cresent = 1.0 - Math.abs((relY / moon.height) * 2); // 0 -> 1 -> 0
-              const behindCresent =
-                relX <= Math.pow(cresent, 0.5) * capturedPhase * (mcx + 2);
+              const cresent = Math.sqrt(r2 - Math.pow(relY, 2));
+              const behindCresent = relX <= cresent * capturedPhase;
 
               const dist2 = Math.pow(relX, 2) + Math.pow(relY, 2);
               let mul = 1.0;
