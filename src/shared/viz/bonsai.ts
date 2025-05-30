@@ -260,7 +260,7 @@ export default function (width: number, height: number): IVisualization {
         if (times.sunrise.getDay() === now.getDay()) {
           const sunRiseStart = times.sunrise.getTime();
           const sunRiseEnd = times.goldenHourEnd.getTime();
-          const sunSetStart = times.sunsetStart.getTime();
+          const sunSetStart = times.goldenHour.getTime();
           const sunSetEnd = times.sunset.getTime();
           day = {
             sunRiseStart,
