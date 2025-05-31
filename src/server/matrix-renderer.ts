@@ -18,6 +18,10 @@ class AudioPlayerProxy implements IAudioPlayer {
     console.log(JSON.stringify({ type: "audio-volume", volume }));
   }
 
+  masterVolume(_: number) {
+    // visualizations can't set the master volume
+  }
+
   play(file: string) {
     console.log(JSON.stringify({ type: "audio-play", file }));
   }
@@ -140,7 +144,13 @@ class MatrixRenderer {
 
   _afterSync(_matrix: LedMatrixInstance, dt: number, _t: number): void {
     const viz = this.visualizations[this.state.visualization];
-    viz.run(this.backbuffer, this.audioPlayer, this.locationService, dt, new Date().getTime());
+    viz.run(
+      this.backbuffer,
+      this.audioPlayer,
+      this.locationService,
+      dt,
+      new Date().getTime()
+    );
     this.backbuffer.present(this.matrix);
     this.activeTimeout = setTimeout(() => {
       if (this.state.on) {

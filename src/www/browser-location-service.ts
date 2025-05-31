@@ -38,7 +38,6 @@ export class BrowserLocationService implements ILocationService {
     this.location = this.getLocationFromTimezone();
     this.getCurrentPosition()
       .then((position) => {
-        console.log(position);
         this.location = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,

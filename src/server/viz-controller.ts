@@ -7,6 +7,7 @@ import { AudioPlayer } from "./audio-player.ts";
 interface VizState {
   visualization: number;
   on: boolean;
+  volume: number;
 }
 
 interface VizChangeEvent {
@@ -27,7 +28,7 @@ export class VizController extends EventEmitter {
     super();
 
     this.childProcess = null;
-    this.audioPlayer = new AudioPlayer();
+    this.audioPlayer = new AudioPlayer(initialState.volume);
     this.state = initialState;
     this.identifying = false;
 
@@ -134,6 +135,13 @@ export class VizController extends EventEmitter {
       type: "set-state",
       state: this.state,
     });
+    this.emit("change", { state: this.state, source } as VizChangeEvent);
+    return this.state;
+  }
+
+  setVolume(volume: number, source: string): VizState {
+    this.state.volume = volume;
+    this.audioPlayer.masterVolume(volume);
     this.emit("change", { state: this.state, source } as VizChangeEvent);
     return this.state;
   }

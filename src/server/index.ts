@@ -73,10 +73,11 @@ app.locals.storage = storage;
   });
 
   let vizState = await storage.getItem(config.VIZ_KEY);
+  const initialState = { visualization: 0, on: false, volume: 0.5 };
   if (vizState) {
-    vizState = JSON.parse(vizState);
+    vizState = { ...initialState, ...JSON.parse(vizState) };
   } else {
-    vizState = { visualization: 0, on: false };
+    vizState = initialState;
   }
   app.locals.vizController = new VizController(vizState);
   configureApiRoutes(app);

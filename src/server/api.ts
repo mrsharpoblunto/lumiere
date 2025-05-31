@@ -137,4 +137,31 @@ export function configureApiRoutes(app: Application): void {
       });
     }
   });
+
+  app.post("/api/1/volume", async (req: Request, res: Response) => {
+    try {
+      if (!req.app.locals.vizController || !req.app.locals.storage) {
+        throw new Error("VizController or storage not initialized");
+      }
+
+      const { volume } = req.app.locals.vizController.setVolume(
+        parseFloat(req.body.volume),
+        config.WEB_USER
+      );
+      await req.app.locals.storage.setItem(
+        config.VIZ_KEY,
+        JSON.stringify(req.app.locals.vizController.getState())
+      );
+      req.app.locals.logger?.info("Set volume to " + volume);
+      res.json({
+        success: true,
+        volume,
+      });
+    } catch (err: any) {
+      req.app.locals.logger?.error(err.stack);
+      res.status(500).json({
+        success: false,
+      });
+    }
+  });
 }

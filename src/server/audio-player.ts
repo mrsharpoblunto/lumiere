@@ -6,20 +6,31 @@ export class AudioPlayer implements IAudioPlayer {
   private _current: ChildProcess | null;
   private _currentFile: string | null;
   private _queuedFile: string | null;
+  private _masterVolume: number;
 
-  constructor() {
+  constructor(masterVolume: number = 1.0) {
     this._current = null;
     this._currentFile = null;
     this._queuedFile = null;
+    this._masterVolume = masterVolume;
   }
 
+  private _currentVolume: number = 100;
+
   volume(volume: number): void {
-    exec(`${VOLUME_COMMAND} ${volume}%`, (error) => {
+    this._currentVolume = volume;
+    const adjustedVolume = volume * this._masterVolume;
+    exec(`${VOLUME_COMMAND} ${adjustedVolume}%`, (error) => {
       if (error) {
         console.error(`exec error setting volume: ${error}`);
         return;
       }
     });
+  }
+
+  masterVolume(volume: number): void {
+    this._masterVolume = volume;
+    this.volume(this._currentVolume);
   }
 
   play(file: string): void {

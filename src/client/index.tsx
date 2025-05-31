@@ -8,6 +8,7 @@ const LONGPOLL_TIMEOUT = 30000;
 type RemoteState = {
   on: boolean;
   visualization: number;
+  volume: number;
 };
 
 function useRemoteState(): [
@@ -17,6 +18,7 @@ function useRemoteState(): [
   const [remoteState, setRemoteState] = React.useState<RemoteState>({
     on: false,
     visualization: -1,
+    volume: 0.5,
   });
   const [polling, setPolling] = React.useState(false);
 
@@ -56,7 +58,7 @@ function useRemoteState(): [
         pollNext(res.state || state);
       })
       .catch((_err) => {
-        setPolling(false);
+        setTimeout(() => setPolling(false), 1000);
       })
       .finally(() => {
         clearTimeout(abortTimeout);
@@ -97,11 +99,131 @@ function selectVisualization(
   });
 }
 
+let pendingRequests = 0;
+let pendingVolume = 0;
+
+function throttle<T extends (...args: any[]) => any>(
+  func: T,
+  delay: number
+): (...args: Parameters<T>) => void {
+  let timeoutId: NodeJS.Timeout | null = null;
+  let queued: T | null = null;
+  let queuedArgs: Parameters<T> | null = null;
+
+  const throttleCall = (fn: T, args: Parameters<T>) => {
+    queued = queuedArgs = null;
+    fn(...args);
+    timeoutId = setTimeout(() => {
+      timeoutId = null;
+      if (queued && queuedArgs) {
+        throttleCall(queued, queuedArgs);
+      }
+    }, delay);
+  };
+
+  return (...args: Parameters<T>) => {
+    if (timeoutId) {
+      queued = func;
+      queuedArgs = args;
+    } else {
+      throttleCall(func, args);
+    }
+  };
+}
+
+const setVolume = throttle(
+  (
+    volume: number,
+    remoteState: RemoteState,
+    setRemoteState: React.Dispatch<React.SetStateAction<RemoteState>>
+  ) => {
+    setRemoteState({ ...remoteState, volume });
+    if (pendingRequests > 1) {
+      console.log("pending");
+      pendingVolume = volume;
+      return;
+    } else {
+      fetch("/api/1/volume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ volume }),
+      });
+    }
+  },
+  500
+);
+
 function ToggleSwitch({ isOn }: { isOn: boolean }) {
   return (
     <div className="toggle-switch">
       <div className={`toggle-slider ${isOn ? "on" : "off"}`}>
         <div className="toggle-knob"></div>
+      </div>
+    </div>
+  );
+}
+
+function VolumeControl({
+  volume,
+  onChange,
+}: {
+  volume: number;
+  onChange: (volume: number) => void;
+}) {
+  const [isDragging, setIsDragging] = React.useState(false);
+  const volumeRef = React.useRef<HTMLDivElement>(null);
+
+  const updateVolume = (e: PointerEvent | React.PointerEvent) => {
+    if (!volumeRef.current) return;
+    const rect = volumeRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const newVolume = Math.max(0, Math.min(1, x / rect.width));
+    onChange(newVolume);
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    setIsDragging(true);
+    updateVolume(e);
+    e.preventDefault();
+  };
+
+  React.useEffect(() => {
+    const handlePointerMove = (e: PointerEvent) => {
+      if (isDragging) {
+        updateVolume(e);
+      }
+    };
+
+    const handlePointerUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener("pointermove", handlePointerMove);
+      document.addEventListener("pointerup", handlePointerUp);
+    }
+
+    return () => {
+      document.removeEventListener("pointermove", handlePointerMove);
+      document.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [isDragging, updateVolume]);
+
+  return (
+    <div
+      className="volume-control"
+      ref={volumeRef}
+      onPointerDown={handlePointerDown}
+    >
+      <div className="volume-triangle">
+        <div
+          className="volume-slider"
+          style={{ left: `${volume * 100}%` }}
+        ></div>
+        <div
+          className="volume-fill"
+          style={{ width: `${(1 - volume) * 100}%` }}
+        ></div>
       </div>
     </div>
   );
@@ -137,6 +259,13 @@ function VisualizationList() {
     [selectVisualization, state, setState]
   );
 
+  const handleVolumeChange = React.useCallback(
+    (newVolume: number) => {
+      setVolume(newVolume, state, setState);
+    },
+    [setVolume, state, setState]
+  );
+
   return (
     <>
       <button
@@ -146,6 +275,9 @@ function VisualizationList() {
       >
         <ToggleSwitch isOn={state.on} />
       </button>
+      <div className="volume-button">
+        <VolumeControl volume={state.volume} onChange={handleVolumeChange} />
+      </div>
       <div className="visualization-list">
         {visualizations.map((v, index) => (
           <VisualizationItem
@@ -229,6 +361,66 @@ function App() {
         
         .toggle-slider.on .toggle-knob {
           transform: translateX(48px);
+        }
+        
+        .volume-button {
+          position: fixed;
+          top: 8px;
+          right: calc(8px + env(scrollbar-width, 15px));
+          z-index: 100;
+        }
+        
+        .volume-control {
+          width: 104px;
+          height: 56px;
+          cursor: pointer;
+          position: relative;
+        }
+        
+        .volume-control::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 104px;
+          height: 56px;
+          background-color: #f5f5f5;
+          clip-path: polygon(0% 0%, 100% 100%, 0% 100%);
+          z-index: 0;
+        }
+        
+        .volume-triangle {
+          position: absolute;
+          top: 7px;
+          left: 4px;
+          width: 83px;
+          height: 45px;
+          background-color: #121212;
+          clip-path: polygon(0% 0%, 100% 100%, 0% 100%);
+          overflow: hidden;
+          z-index: 1;
+        }
+        
+        .volume-fill {
+          position: absolute;
+          top: 0;
+          right: 0;
+          height: 100%;
+          background-color: #4CAF50;
+          transition: width 0.1s ease;
+          clip-path: polygon(0% 0%, 100% 100%, 0% 100%);
+          z-index: 2;
+        }
+        
+        .volume-slider {
+          position: absolute;
+          top: 0px;
+          width: 8px;
+          height: 56px;
+          background-color: #f5f5f5;
+          transform: translateX(-4px);
+          transition: left 0.1s ease;
+          z-index: 3;
         }
         
         .visualization-list {

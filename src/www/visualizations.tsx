@@ -79,7 +79,7 @@ export function Visualization(props: {
     );
     const player: IAudioPlayer =
       audio && audioRef.current
-        ? new BrowserAudio(audioRef.current, onAudioNotPermitted)
+        ? new BrowserAudio(audioRef.current, 1.0, onAudioNotPermitted)
         : new NullAudio();
     const locationService = new BrowserLocationService();
     player.volume(viz.volume);
