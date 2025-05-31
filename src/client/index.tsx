@@ -244,7 +244,7 @@ function VisualizationList() {
 
   const handleVolumeChange = (newVolume: number) => {
     setState({ ...state, volume: newVolume });
-    setVolume(newVolume, state, setState);
+    setVolume(newVolume);
   };
 
   return (
