@@ -131,27 +131,13 @@ function throttle<T extends (...args: any[]) => any>(
   };
 }
 
-const setVolume = throttle(
-  (
-    volume: number,
-    remoteState: RemoteState,
-    setRemoteState: React.Dispatch<React.SetStateAction<RemoteState>>
-  ) => {
-    setRemoteState({ ...remoteState, volume });
-    if (pendingRequests > 1) {
-      console.log("pending");
-      pendingVolume = volume;
-      return;
-    } else {
-      fetch("/api/1/volume", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ volume }),
-      });
-    }
-  },
-  500
-);
+const setVolume = throttle((volume: number) => {
+  fetch("/api/1/volume", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ volume }),
+  });
+}, 500);
 
 function ToggleSwitch({ isOn }: { isOn: boolean }) {
   return (
@@ -178,7 +164,7 @@ function VolumeControl({
     const rect = volumeRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const newVolume = Math.max(0, Math.min(1, x / rect.width));
-    onChange(newVolume);
+    onChange(1 - newVolume);
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -218,11 +204,11 @@ function VolumeControl({
       <div className="volume-triangle">
         <div
           className="volume-slider"
-          style={{ left: `${volume * 100}%` }}
+          style={{ left: `${(1 - volume) * 100}%` }}
         ></div>
         <div
           className="volume-fill"
-          style={{ width: `${(1 - volume) * 100}%` }}
+          style={{ width: `${volume * 100}%` }}
         ></div>
       </div>
     </div>
@@ -254,17 +240,12 @@ function VisualizationList() {
     setState,
   ]);
 
-  const handleSelect = React.useCallback(
-    (v: number) => selectVisualization(v, state, setState),
-    [selectVisualization, state, setState]
-  );
+  const handleSelect = (v: number) => selectVisualization(v, state, setState);
 
-  const handleVolumeChange = React.useCallback(
-    (newVolume: number) => {
-      setVolume(newVolume, state, setState);
-    },
-    [setVolume, state, setState]
-  );
+  const handleVolumeChange = (newVolume: number) => {
+    setState({ ...state, volume: newVolume });
+    setVolume(newVolume, state, setState);
+  };
 
   return (
     <>
@@ -372,7 +353,7 @@ function App() {
         
         .volume-control {
           width: 104px;
-          height: 56px;
+          height: 48px;
           cursor: pointer;
           position: relative;
         }
@@ -383,7 +364,7 @@ function App() {
           top: 0;
           left: 0;
           width: 104px;
-          height: 56px;
+          height: 48px;
           background-color: #f5f5f5;
           clip-path: polygon(0% 0%, 100% 100%, 0% 100%);
           z-index: 0;
@@ -394,7 +375,7 @@ function App() {
           top: 7px;
           left: 4px;
           width: 83px;
-          height: 45px;
+          height: 37px;
           background-color: #121212;
           clip-path: polygon(0% 0%, 100% 100%, 0% 100%);
           overflow: hidden;
