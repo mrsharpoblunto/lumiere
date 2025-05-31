@@ -13,14 +13,15 @@ type RemoteState = {
 
 function useRemoteState(): [
   RemoteState,
-  React.Dispatch<React.SetStateAction<RemoteState>>
+  (newState: Partial<RemoteState>) => void
 ] {
   const [remoteState, setRemoteState] = React.useState<RemoteState>({
     on: false,
     visualization: -1,
     volume: 0.5,
   });
-  const [polling, setPolling] = React.useState(false);
+
+  const polling = React.useRef(false);
 
   const pollState = (state: RemoteState) => {
     const startTime = new Date();
@@ -58,7 +59,7 @@ function useRemoteState(): [
         pollNext(res.state || state);
       })
       .catch((_err) => {
-        setTimeout(() => setPolling(false), 1000);
+        pollNext(state);
       })
       .finally(() => {
         clearTimeout(abortTimeout);
@@ -66,19 +67,29 @@ function useRemoteState(): [
       });
   };
 
-  if (!polling) {
+  if (!polling.current) {
+    polling.current = true;
     pollState(remoteState);
-    setPolling(true);
   }
 
-  return [remoteState, setRemoteState];
+  const updateState = React.useCallback(
+    (newState: Partial<RemoteState>) => {
+      setRemoteState((prevState) => ({
+        ...prevState,
+        ...newState,
+      }));
+    },
+    [setRemoteState]
+  );
+
+  return [remoteState, updateState];
 }
 
-function toggleOn(
-  remoteState: RemoteState,
-  setRemoteState: React.Dispatch<React.SetStateAction<RemoteState>>
+function setOn(
+  on: boolean,
+  updateState: (newState: Partial<RemoteState>) => void
 ) {
-  setRemoteState({ ...remoteState, on: !remoteState.on });
+  updateState({ on });
   fetch("/api/1/toggle-on", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -88,10 +99,9 @@ function toggleOn(
 
 function selectVisualization(
   visualization: number,
-  remoteState: RemoteState,
-  setRemoteState: React.Dispatch<React.SetStateAction<RemoteState>>
+  updateState: (newState: Partial<RemoteState>) => void
 ) {
-  setRemoteState({ ...remoteState, visualization });
+  updateState({ visualization });
   fetch("/api/1/set-visualization", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -99,8 +109,17 @@ function selectVisualization(
   });
 }
 
-let pendingRequests = 0;
-let pendingVolume = 0;
+const setVolume = throttle(
+  (volume: number, updateState: (newState: Partial<RemoteState>) => void) => {
+    updateState({ volume });
+    fetch("/api/1/volume", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ volume }),
+    });
+  },
+  500
+);
 
 function throttle<T extends (...args: any[]) => any>(
   func: T,
@@ -131,14 +150,6 @@ function throttle<T extends (...args: any[]) => any>(
   };
 }
 
-const setVolume = throttle((volume: number) => {
-  fetch("/api/1/volume", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ volume }),
-  });
-}, 500);
-
 function ToggleSwitch({ isOn }: { isOn: boolean }) {
   return (
     <div className="toggle-switch">
@@ -156,38 +167,48 @@ function VolumeControl({
   volume: number;
   onChange: (volume: number) => void;
 }) {
-  const [isDragging, setIsDragging] = React.useState(false);
+  const isDragging = React.useRef(false);
   const volumeRef = React.useRef<HTMLDivElement>(null);
+  const volumeSliderRef = React.useRef<HTMLDivElement>(null);
+  const volumeFillRef = React.useRef<HTMLDivElement>(null);
 
   const updateVolume = (e: PointerEvent | React.PointerEvent) => {
-    if (!volumeRef.current) return;
+    if (
+      !volumeRef.current ||
+      !volumeSliderRef.current ||
+      !volumeFillRef.current
+    ) {
+      return;
+    }
+
     const rect = volumeRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    const newVolume = Math.max(0, Math.min(1, x / rect.width));
-    onChange(1 - newVolume);
+    const newVolume = 1 - Math.max(0, Math.min(1, x / rect.width));
+    // optimistic update as actual state changes are throttled
+    volumeSliderRef.current.style.left = `${(1 - newVolume) * 100}%`;
+    volumeFillRef.current.style.width = `${newVolume * 100}%`;
+    onChange(newVolume);
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    setIsDragging(true);
+    isDragging.current = true;
     updateVolume(e);
     e.preventDefault();
   };
 
   React.useEffect(() => {
     const handlePointerMove = (e: PointerEvent) => {
-      if (isDragging) {
+      if (isDragging.current) {
         updateVolume(e);
       }
     };
 
     const handlePointerUp = () => {
-      setIsDragging(false);
+      isDragging.current = false;
     };
 
-    if (isDragging) {
-      document.addEventListener("pointermove", handlePointerMove);
-      document.addEventListener("pointerup", handlePointerUp);
-    }
+    document.addEventListener("pointermove", handlePointerMove);
+    document.addEventListener("pointerup", handlePointerUp);
 
     return () => {
       document.removeEventListener("pointermove", handlePointerMove);
@@ -204,10 +225,12 @@ function VolumeControl({
       <div className="volume-triangle">
         <div
           className="volume-slider"
+          ref={volumeSliderRef}
           style={{ left: `${(1 - volume) * 100}%` }}
         ></div>
         <div
           className="volume-fill"
+          ref={volumeFillRef}
           style={{ width: `${volume * 100}%` }}
         ></div>
       </div>
@@ -233,18 +256,13 @@ function VisualizationItem({
 }
 
 function VisualizationList() {
-  const [state, setState] = useRemoteState();
+  const [state, updateState] = useRemoteState();
   const visualizations = useVisualizations();
-  const handleToggleOn = React.useCallback(() => toggleOn(state, setState), [
-    state,
-    setState,
-  ]);
 
-  const handleSelect = (v: number) => selectVisualization(v, state, setState);
-
+  const handleToggleOn = () => setOn(!state.on, updateState);
+  const handleSelect = (v: number) => selectVisualization(v, updateState);
   const handleVolumeChange = (newVolume: number) => {
-    setState({ ...state, volume: newVolume });
-    setVolume(newVolume);
+    setVolume(newVolume, updateState);
   };
 
   return (
@@ -307,6 +325,7 @@ function App() {
           left: 8px;
           cursor: pointer;
           z-index: 100;
+          border: none;
         }
         
         .toggle-switch {
@@ -388,7 +407,6 @@ function App() {
           right: 0;
           height: 100%;
           background-color: #4CAF50;
-          transition: width 0.1s ease;
           clip-path: polygon(0% 0%, 100% 100%, 0% 100%);
           z-index: 2;
         }
@@ -400,7 +418,6 @@ function App() {
           height: 56px;
           background-color: #f5f5f5;
           transform: translateX(-4px);
-          transition: left 0.1s ease;
           z-index: 3;
         }
         
