@@ -530,7 +530,7 @@ export default function (width: number, height: number): IVisualization {
         const r2 = Math.pow(mcx, 2);
         const moonPosition = {
           x: Math.round(mcx + cx + 5 + Math.pow(paletteLerp * 3, 2) * cx),
-          y: Math.round(height - height * paletteLerp * 3),
+          y: Math.round(mcy + height - height * paletteLerp * 3),
         };
 
         backbuffer
