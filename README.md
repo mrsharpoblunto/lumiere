@@ -20,6 +20,32 @@ Control an LED matrix for an animated display on a Raspberry Pi. If you want to 
 
 ![Web UI](/screenshot.png)
 
+## Audio (headless setup)
+
+When running headless, audio needs PipeWire configured as a user service with linger enabled so it starts at boot without a login session.
+
+- Disable PulseAudio to avoid conflicts with PipeWire
+```
+systemctl --user disable --now pulseaudio.service pulseaudio.socket
+systemctl --user mask pulseaudio.service pulseaudio.socket
+sudo systemctl disable --now pulseaudio.service
+```
+
+- Ensure PipeWire is enabled
+```
+systemctl --user enable pipewire pipewire-pulse
+```
+
+- Enable linger so user services start at boot without a login session
+```
+sudo loginctl enable-linger pi
+```
+
+- Set the default audio output to the USB sound card
+```
+pactl set-default-sink alsa_output.usb-Generic_USB2.0_Device_20130101ph0-00.analog-stereo
+```
+
 ## Using LetsEncrypt
 
 To use a real SSL certificate requires a few config changes and some additional configuration (assuming you're using cloudflare).
