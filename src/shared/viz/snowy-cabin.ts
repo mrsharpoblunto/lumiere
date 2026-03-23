@@ -5,7 +5,6 @@ import {
   vecNormalize,
 } from "./helpers.ts";
 import type { Vec2 } from "./helpers.ts";
-import * as moon from "../assets/moon.ts";
 import SunCalc from "suncalc";
 import { FlowGrid } from "./flow-grid.ts";
 import { alphaBlend, alphaAdditiveBlend } from "./back-buffer.ts";
@@ -53,6 +52,14 @@ const SNOW_ATTRACTOR_MAX_VELOCITY = 0.04;
 
 // Stars
 const MAX_STARS = 96;
+
+// Smoke
+const MAX_SMOKE_PARTICLES = 6;
+const SMOKE_RISE_SPEED = 0.04;
+const SMOKE_SPAWN_RATE = 0.15;
+const SMOKE_INITIAL_RADIUS = 1.5;
+const SMOKE_MAX_RADIUS = 3.5;
+const SMOKE_TTL = 120;
 
 const BASE_FRAME_TIME = 16;
 
@@ -402,9 +409,17 @@ export default function (width: number, height: number): IVisualization {
     });
   }
 
+  // Smoke particles
+  const smokeParticles: Array<{
+    x: number;
+    y: number;
+    age: number;
+    ttl: number;
+    radius: number;
+  }> = [];
+
   let prevDate: Date | null = null;
   let prevLocation: GeoLocationCoordinates | null = null;
-  let phase = 0.0;
   let day: SunInfo | null = null;
 
   return {
@@ -441,7 +456,6 @@ export default function (width: number, height: number): IVisualization {
           prevLocation.latitude,
           prevLocation.longitude
         );
-        phase = SunCalc.getMoonIllumination(midday).phase;
         if (times.sunrise.getDay() === now.getDay()) {
           const sunRiseStart = times.sunrise.getTime();
           const sunRiseEnd = times.goldenHourEnd.getTime();
@@ -576,6 +590,38 @@ export default function (width: number, height: number): IVisualization {
         });
       }
 
+      // Update smoke particles
+      const chimneySpawnX = cx + Math.floor(CABIN_WIDTH / 2) - 3 + CHIMNEY_WIDTH / 2;
+      const chimneySpawnY = groundY - CABIN_WALL_HEIGHT - CABIN_ROOF_HEIGHT - 2;
+      for (let i = 0; i < smokeParticles.length; ) {
+        const s = smokeParticles[i];
+        s.age += speed;
+        if (s.age >= s.ttl) {
+          smokeParticles.splice(i, 1);
+          continue;
+        }
+        const life = s.age / s.ttl;
+        // Rise and drift with wind
+        const windVec = windGrid.getVector(
+          Math.min(width - 1, Math.max(0, s.x)),
+          Math.min(height - 1, Math.max(0, s.y))
+        );
+        s.y -= SMOKE_RISE_SPEED * (1 - life * 0.5) * speed;
+        s.x += windVec.x * 0.03 * speed;
+        // Grow radius over lifetime
+        s.radius = SMOKE_INITIAL_RADIUS + (SMOKE_MAX_RADIUS - SMOKE_INITIAL_RADIUS) * life;
+        ++i;
+      }
+      if (smokeParticles.length < MAX_SMOKE_PARTICLES && Math.random() < SMOKE_SPAWN_RATE) {
+        smokeParticles.push({
+          x: chimneySpawnX + (Math.random() - 0.5),
+          y: chimneySpawnY,
+          age: 0,
+          ttl: SMOKE_TTL * (0.8 + Math.random() * 0.4),
+          radius: SMOKE_INITIAL_RADIUS,
+        });
+      }
+
       // === DRAWING ===
       backbuffer.clear();
 
@@ -616,58 +662,6 @@ export default function (width: number, height: number): IVisualization {
             backbuffer.fgColor(star.color).setPixel(star.x, star.y);
           }
         }
-      }
-
-      // Moon (night only, from bonsai)
-      if (palette1 === nightPalette && palette2 === nightPalette) {
-        const mcx = moon.width / 2;
-        const mcy = moon.height / 2;
-        const r2 = Math.pow(mcx, 2);
-        const moonPosition = {
-          x: Math.round(mcx + cx + 5 + Math.pow(paletteLerp * 3, 2) * cx),
-          y: Math.round(mcy + height - height * paletteLerp * 3),
-        };
-
-        backbuffer
-          .blendMode(
-            (
-              srcBuffer: Uint8Array,
-              srcOffset: number,
-              destBuffer: Uint8Array,
-              destOffset: number,
-              blendOp: number,
-              x: number,
-              y: number
-            ) => {
-              const relX = x - moonPosition.x + 1;
-              const relY = y - moonPosition.y + 1;
-
-              const waxing = phase <= 0.5;
-              const capturedPhase =
-                1.0 - (phase - (waxing ? 0 : 0.5)) * 4;
-              const cresent = Math.sqrt(r2 - Math.pow(relY, 2));
-              const behindCresent = relX <= cresent * capturedPhase;
-
-              const dist2 = Math.pow(relX, 2) + Math.pow(relY, 2);
-              let mul = 1.0;
-              if (dist2 > r2) {
-                mul = 0;
-              } else if (behindCresent === waxing) {
-                mul = 0.1;
-              } else if (dist2 > r2 - 7) {
-                mul = 0.4;
-              }
-
-              alphaBlend(
-                srcBuffer,
-                srcOffset,
-                destBuffer,
-                destOffset,
-                blendOp * mul
-              );
-            }
-          )
-          .drawAsset(moonPosition.x - mcx, moonPosition.y - mcy, moon);
       }
 
       backbuffer.blendMode(alphaBlend);
@@ -747,6 +741,17 @@ export default function (width: number, height: number): IVisualization {
       backbuffer
         .fgColor(chimneyColor)
         .fill(chimneyX, cabinRoofPeak - 1, chimneyX + CHIMNEY_WIDTH - 1, cabinRoofPeak + 1);
+
+      // Chimney smoke
+      backbuffer.blendMode(alphaBlend);
+      for (const s of smokeParticles) {
+        const life = s.age / s.ttl;
+        const alpha = Math.round(60 * (1 - life));
+        backbuffer
+          .fgColor({ r: 180, g: 180, b: 190, a: alpha })
+          .drawCircle(Math.round(s.x), Math.round(s.y), Math.round(s.radius));
+      }
+      backbuffer.blendMode(null);
 
       // Door
       const doorColor = lerp(
