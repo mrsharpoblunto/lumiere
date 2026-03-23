@@ -767,11 +767,16 @@ export default function (width: number, height: number): IVisualization {
       {
         let auroraAlpha = 0;
         if (dayPeriod === "Night") {
-          auroraAlpha = 1.0;
-        } else if (dayPeriod === "SunsetEnd") {
-          auroraAlpha = paletteLerp;
-        } else if (dayPeriod === "SunriseStart") {
-          auroraAlpha = 1 - paletteLerp;
+          // Use paletteLerp to fade in at start of night, fade out at end
+          // paletteLerp goes 0->1 over the night period
+          const fadeZone = 0.15;
+          if (paletteLerp < fadeZone) {
+            auroraAlpha = paletteLerp / fadeZone;
+          } else if (paletteLerp > 1 - fadeZone) {
+            auroraAlpha = (1 - paletteLerp) / fadeZone;
+          } else {
+            auroraAlpha = 1.0;
+          }
         }
 
         if (auroraAlpha > 0) {
