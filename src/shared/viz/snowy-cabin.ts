@@ -1,9 +1,4 @@
-import {
-  colorLuminance,
-  lerp,
-  vecLength,
-  vecNormalize,
-} from "./helpers.ts";
+import { colorLuminance, lerp, vecLength, vecNormalize } from "./helpers.ts";
 import type { Vec2 } from "./helpers.ts";
 import SunCalc from "suncalc";
 import { FlowGrid } from "./flow-grid.ts";
@@ -23,30 +18,18 @@ const CABIN_WALL_HEIGHT = 6;
 const CABIN_ROOF_HEIGHT = 4;
 const CHIMNEY_WIDTH = 2;
 
-// Trees
-const TREE_LAYERS = 3;
-const TREES_PER_LAYER = 3;
-const TREE_SEGMENTS = 4;
-const TREE_MIN_HEIGHT = 8;
-const TREE_MAX_HEIGHT = 18;
-const TREE_MAX_BRANCH_LENGTH = 5;
+
 
 // Snow particles (from bonsai pattern)
-const MAX_SNOW_PARTICLES = 24;
+const SNOW_SPAWN_RATE = 0.08;
 const SNOW_FALL_SPEED = 0.03;
 const SNOW_PARTICLE_MIN_X = 0.2;
 
-// Wind (from aquarium pattern)
-const WIND_GRID_RESOLUTION = 8;
-const WIND_WAVE_SPEED = 0.04;
-const WIND_WAVE_STRENGTH = 0.4;
-const WIND_MAX_DEPTH = 6;
-const IK_ITERATIONS = 1;
 
 // Snow flow grid (from bonsai pattern)
 const SNOW_GRID_RESOLUTION = 8;
 const SNOW_ATTRACTOR_DISTANCE = 8;
-const SNOW_ATTRACTOR_STRENGTH = 0.5;
+const SNOW_ATTRACTOR_STRENGTH = 0.7;
 const SNOW_ATTRACTOR_MIN_VELOCITY = 0.02;
 const SNOW_ATTRACTOR_MAX_VELOCITY = 0.04;
 
@@ -54,158 +37,21 @@ const SNOW_ATTRACTOR_MAX_VELOCITY = 0.04;
 const MAX_STARS = 96;
 
 // Smoke
-const MAX_SMOKE_PARTICLES = 6;
+const SMOKE_EMIT_INTERVAL = 60;
 const SMOKE_RISE_SPEED = 0.04;
-const SMOKE_SPAWN_RATE = 0.15;
-const SMOKE_INITIAL_RADIUS = 1.5;
-const SMOKE_MAX_RADIUS = 3.5;
-const SMOKE_TTL = 120;
+const SMOKE_INITIAL_SIZE = 2;
+const SMOKE_TTL = 240;
 
 // Aurora
-const AURORA_CURVE_COUNT = 3;
+const AURORA_CONTROL_POINTS = 7;
 const AURORA_SAMPLES = 16;
-const AURORA_FALLOFF_UP = 2.0;
-const AURORA_FALLOFF_DOWN = 6.0;
+const AURORA_FALLOFF_UP = 12.0;
+const AURORA_FALLOFF_DOWN = 12.0;
 const AURORA_MAX_INTENSITY = 0.7;
-const AURORA_DRIFT_SPEED = 0.0003;
-const AURORA_REGION_BOTTOM = 18;
+const AURORA_DRIFT_SPEED = 0.001;
+const AURORA_REGION_BOTTOM = 26;
 
 const BASE_FRAME_TIME = 16;
-
-// FABRIK IK solver (from aquarium)
-type Effector = Vec2 & { l: number };
-
-function fabrikSolve(chain: Array<Effector>, goal: Vec2, iterations: number) {
-  const anchorGoal = { ...chain[0] };
-  while (iterations-- > 0) {
-    for (let i = chain.length - 1; i > 0; --i) {
-      const c = chain[i];
-      const p = chain[i - 1];
-      c.x = goal.x;
-      c.y = goal.y;
-      const newSegment = { x: c.x - p.x, y: c.y - p.y };
-      vecNormalize(newSegment);
-      p.x = goal.x - p.l * newSegment.x;
-      p.y = goal.y - p.l * newSegment.y;
-      goal = p;
-    }
-
-    goal = anchorGoal;
-    for (let i = 0; i < chain.length - 1; ++i) {
-      const c = chain[i];
-      const p = chain[i + 1];
-      c.x = goal.x;
-      c.y = goal.y;
-      const newSegment = { x: c.x - p.x, y: c.y - p.y };
-      vecNormalize(newSegment);
-      p.x = goal.x - p.l * newSegment.x;
-      p.y = goal.y - p.l * newSegment.y;
-      goal = p;
-    }
-  }
-}
-
-class PineTree {
-  chain: Array<Effector>;
-  maxBranchLength: number;
-
-  constructor(
-    anchorX: number,
-    anchorY: number,
-    treeHeight: number,
-    segments: number,
-    maxBranchLength: number
-  ) {
-    const segmentLength = treeHeight / segments;
-    this.chain = [{ x: anchorX, y: anchorY, l: segmentLength }];
-    for (let i = 0; i < segments; i++) {
-      const last = this.chain[this.chain.length - 1];
-      this.chain.push({
-        x: last.x,
-        y: last.y - segmentLength,
-        l: segmentLength,
-      });
-    }
-    this.maxBranchLength = maxBranchLength;
-  }
-
-  draw(backbuffer: Backbuffer, trunkColor: RGBAColor, branchColor: RGBAColor) {
-    // Draw trunk
-    backbuffer.fgColor(trunkColor);
-    let prev = this.chain[0];
-    for (let i = 1; i < this.chain.length; i++) {
-      backbuffer.drawLine(
-        Math.round(prev.x),
-        Math.round(prev.y),
-        Math.round(this.chain[i].x),
-        Math.round(this.chain[i].y)
-      );
-      prev = this.chain[i];
-    }
-
-    // Draw branches at each joint (skip base anchor)
-    backbuffer.fgColor(branchColor);
-    for (let i = 1; i < this.chain.length; i++) {
-      const joint = this.chain[i];
-      const t = i / (this.chain.length - 1);
-      const branchLen = (1 - t * 0.8) * this.maxBranchLength;
-      if (branchLen < 1) continue;
-
-      const jx = Math.round(joint.x);
-      const jy = Math.round(joint.y);
-      // Left branch angled down
-      backbuffer.drawLine(
-        jx,
-        jy,
-        Math.round(jx - branchLen),
-        Math.round(jy + branchLen * 0.4)
-      );
-      // Right branch angled down
-      backbuffer.drawLine(
-        jx,
-        jy,
-        Math.round(jx + branchLen),
-        Math.round(jy + branchLen * 0.4)
-      );
-    }
-  }
-
-  getEffector(): Effector {
-    return this.chain[this.chain.length - 1];
-  }
-}
-
-// Wind attractors (directional, from aquarium)
-type WindAttractor = {
-  x: number;
-  y: number;
-  dx: number;
-  strength: number;
-  maxDistance: number;
-};
-
-function applyDirectionalAttractors(
-  grid: FlowGrid,
-  attractors: Array<WindAttractor>
-) {
-  grid.map((x, y, v) => {
-    v.y = -1;
-    v.x = 0;
-    for (const a of attractors) {
-      if (Math.sign(x - a.x) !== Math.sign(a.dx)) {
-        const attractorDirection = { x: a.x - x, y: a.y - y };
-        const distance = vecLength(attractorDirection);
-        if (distance !== 0) {
-          attractorDirection.x /= distance;
-          const scaledDistance =
-            Math.min(distance, a.maxDistance) / a.maxDistance;
-          v.x += attractorDirection.x * (1.0 - scaledDistance) * a.strength;
-        }
-      }
-    }
-    vecNormalize(v);
-  });
-}
 
 // Snow attractors (point, from bonsai)
 type SnowAttractor = {
@@ -272,60 +118,137 @@ function getDayPeriod(
 }
 
 // Aurora bézier helpers
+type AuroraControlPoint = {
+  baseY: number;
+  // Multiple oscillation layers per point for non-uniform motion
+  oscillations: Array<{ phase: number; freq: number; amp: number }>;
+};
+
 type AuroraCurve = {
-  baseY: [number, number, number, number];
-  phaseOffset: [number, number, number, number];
-  amplitude: [number, number, number, number];
+  points: AuroraControlPoint[];
   hueOffset: number;
   hueDrift: number;
 };
 
 type CurveSample = { x: number; y: number; t: number };
 
-function cubicBezier(
+function catmullRomSegment(
   p0: Vec2,
   p1: Vec2,
   p2: Vec2,
   p3: Vec2,
   t: number
 ): Vec2 {
-  const mt = 1 - t;
-  const mt2 = mt * mt;
-  const mt3 = mt2 * mt;
   const t2 = t * t;
   const t3 = t2 * t;
   return {
-    x: mt3 * p0.x + 3 * mt2 * t * p1.x + 3 * mt * t2 * p2.x + t3 * p3.x,
-    y: mt3 * p0.y + 3 * mt2 * t * p1.y + 3 * mt * t2 * p2.y + t3 * p3.y,
+    x:
+      0.5 *
+      (2 * p1.x +
+        (-p0.x + p2.x) * t +
+        (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
+        (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+    y:
+      0.5 *
+      (2 * p1.y +
+        (-p0.y + p2.y) * t +
+        (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
+        (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3),
   };
 }
 
-function minDistToSamples(
-  px: number,
-  py: number,
-  samples: Array<CurveSample>
-): { dist: number; t: number; curveY: number } {
-  let minDist = Infinity;
-  let bestT = 0;
-  let bestY = 0;
-  for (const s of samples) {
-    const dx = px - s.x;
-    const dy = py - s.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < minDist) {
-      minDist = dist;
-      bestT = s.t;
-      bestY = s.y;
-    }
+function sampleSpline(points: Vec2[], numSamples: number): Array<CurveSample> {
+  const n = points.length;
+  const segments = n - 1;
+  const samples: Array<CurveSample> = [];
+  for (let si = 0; si <= numSamples; si++) {
+    const globalT = si / numSamples;
+    const scaled = globalT * segments;
+    const seg = Math.min(Math.floor(scaled), segments - 1);
+    const localT = scaled - seg;
+    const p0 = points[Math.max(0, seg - 1)];
+    const p1 = points[seg];
+    const p2 = points[Math.min(n - 1, seg + 1)];
+    const p3 = points[Math.min(n - 1, seg + 2)];
+    const pt = catmullRomSegment(p0, p1, p2, p3, localT);
+    samples.push({ x: pt.x, y: pt.y, t: globalT });
   }
-  return { dist: minDist, t: bestT, curveY: bestY };
+  return samples;
 }
 
-function auroraShimmer(t: number, time: number): number {
-  const n1 = Math.sin(t * 7.3 + time * 0.001);
-  const n2 = Math.sin(t * 13.7 + time * 0.0007);
-  const n3 = Math.sin(t * 3.1 + time * 0.0013);
-  return (n1 * n2 * 0.5 + 0.5) * (n3 * 0.3 + 0.7);
+// For a given px, find the curve's y by linearly interpolating between the
+// two nearest samples that straddle it. Returns curveY and curveT.
+function curveYAtX(
+  px: number,
+  samples: Array<CurveSample>
+): { curveY: number; curveT: number } {
+  // Clamp to the first/last sample if outside range
+  if (px <= samples[0].x) return { curveY: samples[0].y, curveT: samples[0].t };
+  const last = samples[samples.length - 1];
+  if (px >= last.x) return { curveY: last.y, curveT: last.t };
+
+  for (let i = 0; i < samples.length - 1; i++) {
+    const a = samples[i];
+    const b = samples[i + 1];
+    if (px >= a.x && px <= b.x) {
+      const f = (px - a.x) / (b.x - a.x);
+      return {
+        curveY: a.y + (b.y - a.y) * f,
+        curveT: a.t + (b.t - a.t) * f,
+      };
+    }
+  }
+  return { curveY: last.y, curveT: last.t };
+}
+
+// Integer hash → pseudo-random 0..1
+function hash(x: number, y: number): number {
+  let n = x * 374761393 + y * 668265263;
+  n = ((n >> 13) ^ n) * 1274126177;
+  return ((n ^ (n >> 16)) & 0x7fffffff) / 0x7fffffff;
+}
+
+// Smooth 2D value noise, returns 0..1
+function valueNoise2D(x: number, y: number): number {
+  const ix = Math.floor(x);
+  const iy = Math.floor(y);
+  const fx = x - ix;
+  const fy = y - iy;
+  // Hermite smoothing
+  const sx = fx * fx * (3 - 2 * fx);
+  const sy = fy * fy * (3 - 2 * fy);
+  const n00 = hash(ix, iy);
+  const n10 = hash(ix + 1, iy);
+  const n01 = hash(ix, iy + 1);
+  const n11 = hash(ix + 1, iy + 1);
+  return (
+    n00 * (1 - sx) * (1 - sy) +
+    n10 * sx * (1 - sy) +
+    n01 * (1 - sx) * sy +
+    n11 * sx * sy
+  );
+}
+
+function auroraShimmer(px: number, curveY: number, time: number): number {
+  const t1 = time * 0.00004;
+  const t2 = time * 0.00003;
+  const t3 = time * 0.00002;
+  const n1 = valueNoise2D(px * 0.35 + t1 * 0.7, curveY * 0.6 - t1 * 1.1);
+  const n2 = valueNoise2D(px * 0.7 - t2 * 0.9, curveY * 0.4 + t2 * 0.6);
+  // Broad low-frequency opacity layer for larger bright/dim regions
+  const n3 = valueNoise2D(px * 0.1 + t3 * 1.2, curveY * 0.15 - t3 * 0.7);
+  const detail = n1 * 0.4 + n2 * 0.2;
+  const broad = 0.15 + n3 * 0.85;
+  return (0.15 + 0.85 * detail) * broad;
+}
+
+function colorGradientNoise(px: number, curveY: number, time: number): number {
+  const t1 = time * 0.00003;
+  const t2 = time * 0.00005;
+  const n1 = valueNoise2D(px * 0.4 + t1 * 1.3, curveY * 0.08 - t1 * 0.3);
+  const n2 = valueNoise2D(px * 0.18 - t2 * 0.6, curveY * 0.04 + t2 * 0.4);
+  const n3 = valueNoise2D(px * 0.8 + t1 * 0.4, curveY * 0.06 + t2 * 0.2);
+  return (n1 - 0.5) * 0.5 + (n2 - 0.5) * 0.4 + (n3 - 0.5) * 0.2;
 }
 
 function smoothstep(edge0: number, edge1: number, x: number): number {
@@ -337,22 +260,7 @@ export default function (width: number, height: number): IVisualization {
   const cx = Math.floor(width / 2);
   const groundY = height - GROUND_HEIGHT;
 
-  // Wind flow grid (for tree sway via IK)
-  const windGrid = new FlowGrid(width, height, {
-    x: WIND_GRID_RESOLUTION,
-    y: WIND_GRID_RESOLUTION,
-  });
-  const windAttractors: Array<WindAttractor> = [
-    {
-      x: 0,
-      y: -1,
-      dx: WIND_WAVE_SPEED,
-      strength: WIND_WAVE_STRENGTH,
-      maxDistance: WIND_MAX_DEPTH,
-    },
-  ];
-
-  // Snow flow grid (for falling snow particles)
+  // Snow flow grid (shared by snow particles and smoke)
   const snowGrid = new FlowGrid(width, height, {
     x: SNOW_GRID_RESOLUTION,
     y: SNOW_GRID_RESOLUTION,
@@ -362,7 +270,8 @@ export default function (width: number, height: number): IVisualization {
       x: Math.random() * SNOW_GRID_RESOLUTION,
       y: Math.random() * SNOW_GRID_RESOLUTION,
       dx:
-        Math.random() * (SNOW_ATTRACTOR_MAX_VELOCITY - SNOW_ATTRACTOR_MIN_VELOCITY) +
+        Math.random() *
+          (SNOW_ATTRACTOR_MAX_VELOCITY - SNOW_ATTRACTOR_MIN_VELOCITY) +
         SNOW_ATTRACTOR_MIN_VELOCITY,
       strength: SNOW_ATTRACTOR_STRENGTH,
       maxDistance: SNOW_ATTRACTOR_DISTANCE,
@@ -371,7 +280,8 @@ export default function (width: number, height: number): IVisualization {
       x: Math.random() * SNOW_GRID_RESOLUTION,
       y: Math.random() * SNOW_GRID_RESOLUTION,
       dx:
-        Math.random() * (SNOW_ATTRACTOR_MAX_VELOCITY - SNOW_ATTRACTOR_MIN_VELOCITY) +
+        Math.random() *
+          (SNOW_ATTRACTOR_MAX_VELOCITY - SNOW_ATTRACTOR_MIN_VELOCITY) +
         SNOW_ATTRACTOR_MIN_VELOCITY,
       strength: SNOW_ATTRACTOR_STRENGTH,
       maxDistance: SNOW_ATTRACTOR_DISTANCE,
@@ -384,8 +294,7 @@ export default function (width: number, height: number): IVisualization {
     skyBottom: { r: 180, g: 210, b: 235, a: 255 },
     ground: { r: 220, g: 225, b: 235, a: 255 },
     groundDark: { r: 190, g: 200, b: 215, a: 255 },
-    trunk: { r: 80, g: 50, b: 30, a: 255 },
-    branch: { r: 50, g: 75, b: 35, a: 255 },
+
     cabinWall: { r: 120, g: 70, b: 40, a: 255 },
     cabinWallDark: { r: 90, g: 50, b: 25, a: 255 },
     cabinRoof: { r: 210, g: 215, b: 225, a: 255 },
@@ -399,8 +308,7 @@ export default function (width: number, height: number): IVisualization {
     skyBottom: { r: 230, g: 100, b: 40, a: 255 },
     ground: { r: 200, g: 190, b: 200, a: 255 },
     groundDark: { r: 170, g: 155, b: 170, a: 255 },
-    trunk: { r: 50, g: 30, b: 25, a: 255 },
-    branch: { r: 30, g: 40, b: 25, a: 255 },
+
     cabinWall: { r: 100, g: 55, b: 35, a: 255 },
     cabinWallDark: { r: 70, g: 35, b: 20, a: 255 },
     cabinRoof: { r: 180, g: 160, b: 160, a: 255 },
@@ -414,8 +322,7 @@ export default function (width: number, height: number): IVisualization {
     skyBottom: { r: 15, g: 30, b: 55, a: 255 },
     ground: { r: 40, g: 50, b: 75, a: 255 },
     groundDark: { r: 25, g: 35, b: 55, a: 255 },
-    trunk: { r: 20, g: 15, b: 15, a: 255 },
-    branch: { r: 15, g: 25, b: 20, a: 255 },
+
     cabinWall: { r: 35, g: 25, b: 20, a: 255 },
     cabinWallDark: { r: 25, g: 15, b: 12, a: 255 },
     cabinRoof: { r: 45, g: 55, b: 75, a: 255 },
@@ -424,46 +331,6 @@ export default function (width: number, height: number): IVisualization {
     cabinChimney: { r: 25, g: 15, b: 12, a: 255 },
     snow: { r: 50, g: 60, b: 90, a: 180 },
   };
-
-  // Create pine trees across 3 layers
-  // Layer 0: behind cabin, Layer 1: beside cabin, Layer 2: in front
-  const cabinLeft = cx - Math.floor(CABIN_WIDTH / 2);
-  const cabinRight = cx + Math.floor(CABIN_WIDTH / 2);
-  const trees: Array<Array<PineTree>> = [];
-
-  for (let layer = 0; layer < TREE_LAYERS; layer++) {
-    const layerTrees: Array<PineTree> = [];
-    for (let j = 0; j < TREES_PER_LAYER; j++) {
-      let x: number;
-      if (layer === 0) {
-        // Behind cabin - spread across
-        x = Math.random() * (width - 4) + 2;
-      } else if (layer === 1) {
-        // Beside cabin - left or right of cabin
-        if (j % 2 === 0) {
-          x = Math.random() * (cabinLeft - 4) + 2;
-        } else {
-          x = cabinRight + 2 + Math.random() * (width - cabinRight - 4);
-        }
-      } else {
-        // In front - edges of screen
-        if (j % 2 === 0) {
-          x = Math.random() * (cabinLeft - 6) + 1;
-        } else {
-          x = cabinRight + 4 + Math.random() * (width - cabinRight - 6);
-        }
-      }
-
-      const treeHeight =
-        TREE_MIN_HEIGHT + Math.random() * (TREE_MAX_HEIGHT - TREE_MIN_HEIGHT);
-      const branchLength = TREE_MAX_BRANCH_LENGTH * (0.5 + Math.random() * 0.5);
-
-      layerTrees.push(
-        new PineTree(x, groundY - 1, treeHeight, TREE_SEGMENTS, branchLength)
-      );
-    }
-    trees.push(layerTrees);
-  }
 
   // Snow particles
   const snowParticles: Array<{ x: number; y: number; color: RGBAColor }> = [];
@@ -486,36 +353,33 @@ export default function (width: number, height: number): IVisualization {
     y: number;
     age: number;
     ttl: number;
-    radius: number;
   }> = [];
+  let smokeFrameCount = 0;
 
-  // Aurora curves
-  const auroraCurves: Array<AuroraCurve> = [];
-  for (let i = 0; i < AURORA_CURVE_COUNT; i++) {
-    const baseHeight = 3 + i * 3;
-    auroraCurves.push({
-      baseY: [
-        baseHeight + Math.random() * 2,
-        baseHeight + Math.random() * 3 - 1,
-        baseHeight + Math.random() * 3 - 1,
-        baseHeight + Math.random() * 2,
-      ],
-      phaseOffset: [
-        Math.random() * Math.PI * 2,
-        Math.random() * Math.PI * 2,
-        Math.random() * Math.PI * 2,
-        Math.random() * Math.PI * 2,
-      ],
-      amplitude: [
-        1 + Math.random() * 1.5,
-        2 + Math.random() * 2,
-        2 + Math.random() * 2,
-        1 + Math.random() * 1.5,
-      ],
-      hueOffset: i / AURORA_CURVE_COUNT,
-      hueDrift: 0.00005 + Math.random() * 0.0001,
+  // Aurora curve — single spline with many control points for organic shape
+  const auroraCurvePoints: AuroraControlPoint[] = [];
+  for (let i = 0; i < AURORA_CONTROL_POINTS; i++) {
+    const f = i / (AURORA_CONTROL_POINTS - 1);
+    const edgeFactor = 1 - Math.abs(f - 0.5) * 1.2;
+    // 3 overlapping oscillation layers with independent frequencies per point
+    const oscillations: AuroraControlPoint["oscillations"] = [];
+    for (let o = 0; o < 3; o++) {
+      oscillations.push({
+        phase: Math.random() * Math.PI * 2,
+        freq: AURORA_DRIFT_SPEED * (0.6 + Math.random() * 1.2),
+        amp: (0.5 + Math.random() * 1.5) * edgeFactor,
+      });
+    }
+    auroraCurvePoints.push({
+      baseY: 4 + Math.random() * 4 * edgeFactor + Math.sin(f * Math.PI) * 3,
+      oscillations,
     });
   }
+  const auroraCurve: AuroraCurve = {
+    points: auroraCurvePoints,
+    hueOffset: Math.random(),
+    hueDrift: 0.00005 + Math.random() * 0.0001,
+  };
 
   let prevDate: Date | null = null;
   let prevLocation: GeoLocationCoordinates | null = null;
@@ -606,8 +470,7 @@ export default function (width: number, height: number): IVisualization {
         case "SunsetEnd":
           palette1 = sunxPalette;
           palette2 = nightPalette;
-          paletteLerp =
-            (t - day.sunSetPeak) / (day.sunSetEnd - day.sunSetPeak);
+          paletteLerp = (t - day.sunSetPeak) / (day.sunSetEnd - day.sunSetPeak);
           break;
         case "Night":
           palette1 = palette2 = nightPalette;
@@ -633,31 +496,7 @@ export default function (width: number, height: number): IVisualization {
 
       // === UPDATE ===
 
-      // Update wind attractors & tree IK
-      for (const a of windAttractors) {
-        a.x += a.dx * speed;
-        if (a.x > windGrid.resolution.x + 2 || a.x < -3) {
-          a.dx *= -1;
-        }
-      }
-      applyDirectionalAttractors(windGrid, windAttractors);
-
-      for (let layer = 0; layer < TREE_LAYERS; layer++) {
-        for (const tree of trees[layer]) {
-          const effector = { ...tree.getEffector() };
-          const vec = windGrid.getVector(
-            Math.min(width - 1, Math.max(0, effector.x)),
-            Math.min(height - 1, Math.max(0, effector.y))
-          );
-          const endEffector = {
-            x: effector.x + vec.x,
-            y: effector.y + vec.y,
-          };
-          fabrikSolve(tree.chain, endEffector, IK_ITERATIONS);
-        }
-      }
-
-      // Update snow attractors & particles
+      // Update snow attractors
       for (const a of snowAttractors) {
         a.x += a.dx * speed;
         if (a.x > snowGrid.resolution.x) {
@@ -675,10 +514,23 @@ export default function (width: number, height: number): IVisualization {
         }
         ++i;
       }
-      while (snowParticles.length < MAX_SNOW_PARTICLES) {
+      if (Math.random() < SNOW_SPAWN_RATE * speed) {
+        let sx: number;
+        let sy: number;
+        const edge = Math.random();
+        if (edge < 0.7) {
+          sx = Math.random() * width;
+          sy = -Math.random() * 4;
+        } else if (edge < 0.85) {
+          sx = 0;
+          sy = Math.random() * height;
+        } else {
+          sx = width - 1;
+          sy = Math.random() * height;
+        }
         snowParticles.push({
-          x: Math.random() * width,
-          y: -Math.random() * 4,
+          x: sx,
+          y: sy,
           color: {
             ...lerp(
               lerp(palette1.snow, palette2.snow, paletteLerp),
@@ -690,7 +542,8 @@ export default function (width: number, height: number): IVisualization {
       }
 
       // Update smoke particles
-      const chimneySpawnX = cx + Math.floor(CABIN_WIDTH / 2) - 3 + CHIMNEY_WIDTH / 2;
+      const chimneySpawnX =
+        cx + Math.floor(CABIN_WIDTH / 2) - 3 + CHIMNEY_WIDTH / 2;
       const chimneySpawnY = groundY - CABIN_WALL_HEIGHT - CABIN_ROOF_HEIGHT - 2;
       for (let i = 0; i < smokeParticles.length; ) {
         const s = smokeParticles[i];
@@ -700,24 +553,21 @@ export default function (width: number, height: number): IVisualization {
           continue;
         }
         const life = s.age / s.ttl;
-        // Rise and drift with wind
-        const windVec = windGrid.getVector(
+        const windVec = snowGrid.getVector(
           Math.min(width - 1, Math.max(0, s.x)),
           Math.min(height - 1, Math.max(0, s.y))
         );
         s.y -= SMOKE_RISE_SPEED * (1 - life * 0.5) * speed;
-        s.x += windVec.x * 0.03 * speed;
-        // Grow radius over lifetime
-        s.radius = SMOKE_INITIAL_RADIUS + (SMOKE_MAX_RADIUS - SMOKE_INITIAL_RADIUS) * life;
+        s.x += windVec.x * SNOW_FALL_SPEED * speed;
         ++i;
       }
-      if (smokeParticles.length < MAX_SMOKE_PARTICLES && Math.random() < SMOKE_SPAWN_RATE) {
+      smokeFrameCount++;
+      if (smokeFrameCount % SMOKE_EMIT_INTERVAL === 0) {
         smokeParticles.push({
           x: chimneySpawnX + (Math.random() - 0.5),
           y: chimneySpawnY,
           age: 0,
           ttl: SMOKE_TTL * (0.8 + Math.random() * 0.4),
-          radius: SMOKE_INITIAL_RADIUS,
         });
       }
 
@@ -780,110 +630,75 @@ export default function (width: number, height: number): IVisualization {
         }
 
         if (auroraAlpha > 0) {
-          // Pre-sample all curves for this frame
-          const frameSamples: Array<Array<CurveSample>> = [];
-          for (const curve of auroraCurves) {
-            const p0 = {
-              x: -2,
-              y:
-                curve.baseY[0] +
-                Math.sin(t * AURORA_DRIFT_SPEED + curve.phaseOffset[0]) *
-                  curve.amplitude[0],
-            };
-            const p1 = {
-              x: width * 0.33,
-              y:
-                curve.baseY[1] +
-                Math.sin(t * AURORA_DRIFT_SPEED * 1.3 + curve.phaseOffset[1]) *
-                  curve.amplitude[1],
-            };
-            const p2 = {
-              x: width * 0.67,
-              y:
-                curve.baseY[2] +
-                Math.sin(t * AURORA_DRIFT_SPEED * 0.9 + curve.phaseOffset[2]) *
-                  curve.amplitude[2],
-            };
-            const p3 = {
-              x: width + 2,
-              y:
-                curve.baseY[3] +
-                Math.sin(t * AURORA_DRIFT_SPEED * 1.1 + curve.phaseOffset[3]) *
-                  curve.amplitude[3],
-            };
-            const samples: Array<CurveSample> = [];
-            for (let si = 0; si <= AURORA_SAMPLES; si++) {
-              const st = si / AURORA_SAMPLES;
-              const pt = cubicBezier(p0, p1, p2, p3, st);
-              samples.push({ x: pt.x, y: pt.y, t: st });
+          // Build animated control points — each point sums its own independent
+          // oscillation layers so neighboring points can move in opposite directions
+          const controlPoints: Vec2[] = [];
+          for (let i = 0; i < AURORA_CONTROL_POINTS; i++) {
+            const cp = auroraCurve.points[i];
+            let yOffset = 0;
+            for (const osc of cp.oscillations) {
+              yOffset += Math.sin(t * osc.freq + osc.phase) * osc.amp;
             }
-            frameSamples.push(samples);
+            const xFrac = i / (AURORA_CONTROL_POINTS - 1);
+            controlPoints.push({
+              x: -2 + (width + 4) * xFrac,
+              y: cp.baseY + yOffset,
+            });
           }
+          const frameSamples = sampleSpline(controlPoints, AURORA_SAMPLES);
+
+          const hue = (auroraCurve.hueOffset + t * auroraCurve.hueDrift) % 1.0;
 
           backbuffer.blendMode(alphaAdditiveBlend);
-          for (let py = 0; py < AURORA_REGION_BOTTOM; py++) {
-            for (let px = 0; px < width; px++) {
-              let totalR = 0;
-              let totalG = 0;
-              let totalB = 0;
+          for (let px = 0; px < width; px++) {
+            const { curveY } = curveYAtX(px, frameSamples);
+            const shimmer = auroraShimmer(px, curveY, t);
+            const colorShift = colorGradientNoise(px, curveY, t);
 
-              for (let ci = 0; ci < auroraCurves.length; ci++) {
-                const curve = auroraCurves[ci];
-                const { dist, t: curveT, curveY } = minDistToSamples(
-                  px,
-                  py,
-                  frameSamples[ci]
-                );
+            for (let py = 0; py < AURORA_REGION_BOTTOM; py++) {
+              const vertDist = py - curveY;
+              const isBelow = vertDist > 0;
+              const absDist = Math.abs(vertDist);
+              const falloffDist = isBelow
+                ? AURORA_FALLOFF_DOWN
+                : AURORA_FALLOFF_UP;
+              const intensity = 1.0 - smoothstep(0, falloffDist, absDist);
+              if (intensity <= 0) continue;
 
-                // Asymmetric falloff: narrow above, wider below (curtain)
-                const isBelow = py > curveY;
-                const falloffDist = isBelow
-                  ? AURORA_FALLOFF_DOWN
-                  : AURORA_FALLOFF_UP;
-                const intensity = 1.0 - smoothstep(0, falloffDist, dist);
-                if (intensity <= 0) continue;
+              // Noise shifts color bands along the curtain so pink/purple
+              // can appear closer to the curve spine at certain positions
+              const rawBelowFactor = isBelow
+                ? Math.min(1, vertDist / AURORA_FALLOFF_DOWN)
+                : 0;
+              const belowFactor = Math.max(
+                0,
+                Math.min(1, rawBelowFactor + colorShift)
+              );
 
-                // Shimmer noise along curve parameter
-                const shimmer = auroraShimmer(curveT, t);
-
-                // Hue drifts slowly over time
-                const hue = (curve.hueOffset + t * curve.hueDrift) % 1.0;
-
-                // Color gradient: green core -> teal -> purple down the curtain
-                const belowFactor = isBelow
-                  ? Math.min(1, (py - curveY) / AURORA_FALLOFF_DOWN)
-                  : 0;
-
-                let r: number;
-                let g: number;
-                let b: number;
-                if (belowFactor < 0.4) {
-                  // Green to teal
-                  const f = belowFactor / 0.4;
-                  r = 40 + (20 - 40) * f + hue * 30;
-                  g = 220 + (160 - 220) * f;
-                  b = 80 + (140 - 80) * f + hue * 40;
-                } else {
-                  // Teal to purple/pink
-                  const f = (belowFactor - 0.4) / 0.6;
-                  r = 20 + (120 - 20) * f + hue * 40;
-                  g = 160 + (40 - 160) * f;
-                  b = 140 + (180 - 140) * f;
-                }
-
-                const finalIntensity =
-                  intensity * shimmer * AURORA_MAX_INTENSITY * auroraAlpha;
-                totalR += r * finalIntensity;
-                totalG += g * finalIntensity;
-                totalB += b * finalIntensity;
+              let r: number;
+              let g: number;
+              let b: number;
+              if (belowFactor < 0.4) {
+                const f = belowFactor / 0.4;
+                r = 40 + (20 - 40) * f + hue * 30;
+                g = 220 + (160 - 220) * f;
+                b = 80 + (140 - 80) * f + hue * 40;
+              } else {
+                const f = (belowFactor - 0.4) / 0.6;
+                r = 20 + (120 - 20) * f + hue * 40;
+                g = 160 + (40 - 160) * f;
+                b = 140 + (180 - 140) * f;
               }
 
-              if (totalR > 0 || totalG > 0 || totalB > 0) {
+              const finalIntensity =
+                intensity * shimmer * AURORA_MAX_INTENSITY * auroraAlpha;
+
+              if (finalIntensity > 0) {
                 backbuffer
                   .fgColor({
-                    r: Math.min(255, Math.round(totalR)),
-                    g: Math.min(255, Math.round(totalG)),
-                    b: Math.min(255, Math.round(totalB)),
+                    r: Math.min(255, Math.round(r * finalIntensity)),
+                    g: Math.min(255, Math.round(g * finalIntensity)),
+                    b: Math.min(255, Math.round(b * finalIntensity)),
                     a: 255,
                   })
                   .setPixel(px, py);
@@ -909,13 +724,6 @@ export default function (width: number, height: number): IVisualization {
         backbuffer
           .fgColor(groundDarkColor)
           .setPixel(tex.x, groundY + tex.layer);
-      }
-
-      // Trees behind cabin (layer 0)
-      const trunkColor = lerp(palette1.trunk, palette2.trunk, paletteLerp);
-      const branchColor = lerp(palette1.branch, palette2.branch, paletteLerp);
-      for (const tree of trees[0]) {
-        tree.draw(backbuffer, trunkColor, branchColor);
       }
 
       // Cabin
@@ -954,9 +762,7 @@ export default function (width: number, height: number): IVisualization {
       for (let ry = 0; ry < CABIN_ROOF_HEIGHT; ry++) {
         const roofY = cabinRoofPeak + ry;
         const halfWidth =
-          Math.floor(
-            ((ry + 1) * (CABIN_WIDTH / 2)) / CABIN_ROOF_HEIGHT
-          ) + 1;
+          Math.floor(((ry + 1) * (CABIN_WIDTH / 2)) / CABIN_ROOF_HEIGHT) + 1;
         backbuffer.drawLine(cx - halfWidth, roofY, cx + halfWidth, roofY);
       }
 
@@ -969,16 +775,24 @@ export default function (width: number, height: number): IVisualization {
       const chimneyX = cr - 3;
       backbuffer
         .fgColor(chimneyColor)
-        .fill(chimneyX, cabinRoofPeak - 1, chimneyX + CHIMNEY_WIDTH - 1, cabinRoofPeak + 1);
+        .fill(
+          chimneyX,
+          cabinRoofPeak - 1,
+          chimneyX + CHIMNEY_WIDTH - 1,
+          cabinRoofPeak + 1
+        );
 
-      // Chimney smoke
+      // Chimney smoke — filled squares that shrink and fade
       backbuffer.blendMode(alphaBlend);
       for (const s of smokeParticles) {
         const life = s.age / s.ttl;
         const alpha = Math.round(60 * (1 - life));
+        const size = Math.max(1, Math.round(SMOKE_INITIAL_SIZE * (1 - life)));
+        const sx = Math.round(s.x);
+        const sy = Math.round(s.y);
         backbuffer
           .fgColor({ r: 180, g: 180, b: 190, a: alpha })
-          .drawCircle(Math.round(s.x), Math.round(s.y), Math.round(s.radius));
+          .fill(sx, sy, sx + size - 1, sy + size - 1);
       }
       backbuffer.blendMode(null);
 
@@ -1001,16 +815,6 @@ export default function (width: number, height: number): IVisualization {
       backbuffer
         .fgColor(windowColor)
         .fill(cl + 2, cabinWallTop + 2, cl + 4, cabinWallTop + 4);
-
-      // Trees beside cabin (layer 1)
-      for (const tree of trees[1]) {
-        tree.draw(backbuffer, trunkColor, branchColor);
-      }
-
-      // Trees in front (layer 2)
-      for (const tree of trees[2]) {
-        tree.draw(backbuffer, trunkColor, branchColor);
-      }
 
       // Snow particles
       backbuffer.blendMode(alphaBlend);
