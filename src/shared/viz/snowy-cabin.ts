@@ -61,6 +61,15 @@ const SMOKE_INITIAL_RADIUS = 1.5;
 const SMOKE_MAX_RADIUS = 3.5;
 const SMOKE_TTL = 120;
 
+// Aurora
+const AURORA_CURVE_COUNT = 3;
+const AURORA_SAMPLES = 16;
+const AURORA_FALLOFF_UP = 2.0;
+const AURORA_FALLOFF_DOWN = 6.0;
+const AURORA_MAX_INTENSITY = 0.7;
+const AURORA_DRIFT_SPEED = 0.0003;
+const AURORA_REGION_BOTTOM = 18;
+
 const BASE_FRAME_TIME = 16;
 
 // FABRIK IK solver (from aquarium)
@@ -262,6 +271,68 @@ function getDayPeriod(
   }
 }
 
+// Aurora bézier helpers
+type AuroraCurve = {
+  baseY: [number, number, number, number];
+  phaseOffset: [number, number, number, number];
+  amplitude: [number, number, number, number];
+  hueOffset: number;
+  hueDrift: number;
+};
+
+type CurveSample = { x: number; y: number; t: number };
+
+function cubicBezier(
+  p0: Vec2,
+  p1: Vec2,
+  p2: Vec2,
+  p3: Vec2,
+  t: number
+): Vec2 {
+  const mt = 1 - t;
+  const mt2 = mt * mt;
+  const mt3 = mt2 * mt;
+  const t2 = t * t;
+  const t3 = t2 * t;
+  return {
+    x: mt3 * p0.x + 3 * mt2 * t * p1.x + 3 * mt * t2 * p2.x + t3 * p3.x,
+    y: mt3 * p0.y + 3 * mt2 * t * p1.y + 3 * mt * t2 * p2.y + t3 * p3.y,
+  };
+}
+
+function minDistToSamples(
+  px: number,
+  py: number,
+  samples: Array<CurveSample>
+): { dist: number; t: number; curveY: number } {
+  let minDist = Infinity;
+  let bestT = 0;
+  let bestY = 0;
+  for (const s of samples) {
+    const dx = px - s.x;
+    const dy = py - s.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < minDist) {
+      minDist = dist;
+      bestT = s.t;
+      bestY = s.y;
+    }
+  }
+  return { dist: minDist, t: bestT, curveY: bestY };
+}
+
+function auroraShimmer(t: number, time: number): number {
+  const n1 = Math.sin(t * 7.3 + time * 0.001);
+  const n2 = Math.sin(t * 13.7 + time * 0.0007);
+  const n3 = Math.sin(t * 3.1 + time * 0.0013);
+  return (n1 * n2 * 0.5 + 0.5) * (n3 * 0.3 + 0.7);
+}
+
+function smoothstep(edge0: number, edge1: number, x: number): number {
+  const v = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+  return v * v * (3 - 2 * v);
+}
+
 export default function (width: number, height: number): IVisualization {
   const cx = Math.floor(width / 2);
   const groundY = height - GROUND_HEIGHT;
@@ -417,6 +488,34 @@ export default function (width: number, height: number): IVisualization {
     ttl: number;
     radius: number;
   }> = [];
+
+  // Aurora curves
+  const auroraCurves: Array<AuroraCurve> = [];
+  for (let i = 0; i < AURORA_CURVE_COUNT; i++) {
+    const baseHeight = 3 + i * 3;
+    auroraCurves.push({
+      baseY: [
+        baseHeight + Math.random() * 2,
+        baseHeight + Math.random() * 3 - 1,
+        baseHeight + Math.random() * 3 - 1,
+        baseHeight + Math.random() * 2,
+      ],
+      phaseOffset: [
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2,
+      ],
+      amplitude: [
+        1 + Math.random() * 1.5,
+        2 + Math.random() * 2,
+        2 + Math.random() * 2,
+        1 + Math.random() * 1.5,
+      ],
+      hueOffset: i / AURORA_CURVE_COUNT,
+      hueDrift: 0.00005 + Math.random() * 0.0001,
+    });
+  }
 
   let prevDate: Date | null = null;
   let prevLocation: GeoLocationCoordinates | null = null;
@@ -660,6 +759,131 @@ export default function (width: number, height: number): IVisualization {
           const starLuminance = colorLuminance(star.color);
           if (starLuminance > skyLuminance) {
             backbuffer.fgColor(star.color).setPixel(star.x, star.y);
+          }
+        }
+      }
+
+      // Aurora (night / near-night only)
+      {
+        let auroraAlpha = 0;
+        if (dayPeriod === "Night") {
+          auroraAlpha = 1.0;
+        } else if (dayPeriod === "SunsetEnd") {
+          auroraAlpha = paletteLerp;
+        } else if (dayPeriod === "SunriseStart") {
+          auroraAlpha = 1 - paletteLerp;
+        }
+
+        if (auroraAlpha > 0) {
+          // Pre-sample all curves for this frame
+          const frameSamples: Array<Array<CurveSample>> = [];
+          for (const curve of auroraCurves) {
+            const p0 = {
+              x: -2,
+              y:
+                curve.baseY[0] +
+                Math.sin(t * AURORA_DRIFT_SPEED + curve.phaseOffset[0]) *
+                  curve.amplitude[0],
+            };
+            const p1 = {
+              x: width * 0.33,
+              y:
+                curve.baseY[1] +
+                Math.sin(t * AURORA_DRIFT_SPEED * 1.3 + curve.phaseOffset[1]) *
+                  curve.amplitude[1],
+            };
+            const p2 = {
+              x: width * 0.67,
+              y:
+                curve.baseY[2] +
+                Math.sin(t * AURORA_DRIFT_SPEED * 0.9 + curve.phaseOffset[2]) *
+                  curve.amplitude[2],
+            };
+            const p3 = {
+              x: width + 2,
+              y:
+                curve.baseY[3] +
+                Math.sin(t * AURORA_DRIFT_SPEED * 1.1 + curve.phaseOffset[3]) *
+                  curve.amplitude[3],
+            };
+            const samples: Array<CurveSample> = [];
+            for (let si = 0; si <= AURORA_SAMPLES; si++) {
+              const st = si / AURORA_SAMPLES;
+              const pt = cubicBezier(p0, p1, p2, p3, st);
+              samples.push({ x: pt.x, y: pt.y, t: st });
+            }
+            frameSamples.push(samples);
+          }
+
+          backbuffer.blendMode(alphaAdditiveBlend);
+          for (let py = 0; py < AURORA_REGION_BOTTOM; py++) {
+            for (let px = 0; px < width; px++) {
+              let totalR = 0;
+              let totalG = 0;
+              let totalB = 0;
+
+              for (let ci = 0; ci < auroraCurves.length; ci++) {
+                const curve = auroraCurves[ci];
+                const { dist, t: curveT, curveY } = minDistToSamples(
+                  px,
+                  py,
+                  frameSamples[ci]
+                );
+
+                // Asymmetric falloff: narrow above, wider below (curtain)
+                const isBelow = py > curveY;
+                const falloffDist = isBelow
+                  ? AURORA_FALLOFF_DOWN
+                  : AURORA_FALLOFF_UP;
+                const intensity = 1.0 - smoothstep(0, falloffDist, dist);
+                if (intensity <= 0) continue;
+
+                // Shimmer noise along curve parameter
+                const shimmer = auroraShimmer(curveT, t);
+
+                // Hue drifts slowly over time
+                const hue = (curve.hueOffset + t * curve.hueDrift) % 1.0;
+
+                // Color gradient: green core -> teal -> purple down the curtain
+                const belowFactor = isBelow
+                  ? Math.min(1, (py - curveY) / AURORA_FALLOFF_DOWN)
+                  : 0;
+
+                let r: number;
+                let g: number;
+                let b: number;
+                if (belowFactor < 0.4) {
+                  // Green to teal
+                  const f = belowFactor / 0.4;
+                  r = 40 + (20 - 40) * f + hue * 30;
+                  g = 220 + (160 - 220) * f;
+                  b = 80 + (140 - 80) * f + hue * 40;
+                } else {
+                  // Teal to purple/pink
+                  const f = (belowFactor - 0.4) / 0.6;
+                  r = 20 + (120 - 20) * f + hue * 40;
+                  g = 160 + (40 - 160) * f;
+                  b = 140 + (180 - 140) * f;
+                }
+
+                const finalIntensity =
+                  intensity * shimmer * AURORA_MAX_INTENSITY * auroraAlpha;
+                totalR += r * finalIntensity;
+                totalG += g * finalIntensity;
+                totalB += b * finalIntensity;
+              }
+
+              if (totalR > 0 || totalG > 0 || totalB > 0) {
+                backbuffer
+                  .fgColor({
+                    r: Math.min(255, Math.round(totalR)),
+                    g: Math.min(255, Math.round(totalG)),
+                    b: Math.min(255, Math.round(totalB)),
+                    a: 255,
+                  })
+                  .setPixel(px, py);
+              }
+            }
           }
         }
       }
