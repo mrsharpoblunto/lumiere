@@ -10,15 +10,9 @@ import type {
   GeoLocationCoordinates,
 } from "../location-service-type.ts";
 import type { IVisualization } from "./visualization-type.ts";
-
-// Scene layout
-const GROUND_HEIGHT = 5;
-const CABIN_WIDTH = 12;
-const CABIN_WALL_HEIGHT = 6;
-const CABIN_ROOF_HEIGHT = 4;
-const CHIMNEY_WIDTH = 2;
-
-
+import * as sceneDayAsset from "../assets/snowy-cabin.ts";
+import * as sceneNightAsset from "../assets/snowy-cabin-night.ts";
+import * as sceneSunsetAsset from "../assets/snowy-cabin-sunset.ts";
 
 // Snow particles (from bonsai pattern)
 const SNOW_SPAWN_RATE = 0.08;
@@ -257,9 +251,6 @@ function smoothstep(edge0: number, edge1: number, x: number): number {
 }
 
 export default function (width: number, height: number): IVisualization {
-  const cx = Math.floor(width / 2);
-  const groundY = height - GROUND_HEIGHT;
-
   // Snow flow grid (shared by snow particles and smoke)
   const snowGrid = new FlowGrid(width, height, {
     x: SNOW_GRID_RESOLUTION,
@@ -288,64 +279,35 @@ export default function (width: number, height: number): IVisualization {
     },
   ];
 
-  // Color palettes for day/night cycle
-  const dayPalette = {
-    skyTop: { r: 110, g: 170, b: 220, a: 255 },
-    skyBottom: { r: 180, g: 210, b: 235, a: 255 },
-    ground: { r: 220, g: 225, b: 235, a: 255 },
-    groundDark: { r: 190, g: 200, b: 215, a: 255 },
+  // Scene assets for day/night tweening
+  const dayScene = sceneDayAsset;
+  const sunsetScene = sceneSunsetAsset;
+  const nightScene = sceneNightAsset;
 
-    cabinWall: { r: 120, g: 70, b: 40, a: 255 },
-    cabinWallDark: { r: 90, g: 50, b: 25, a: 255 },
-    cabinRoof: { r: 210, g: 215, b: 225, a: 255 },
-    cabinDoor: { r: 70, g: 40, b: 20, a: 255 },
-    cabinWindow: { r: 200, g: 180, b: 120, a: 255 },
-    cabinChimney: { r: 100, g: 55, b: 30, a: 255 },
-    snow: { r: 230, g: 235, b: 245, a: 180 },
+  // Sky gradient palettes (visible through transparent regions of the scene PNG)
+  const daySky = {
+    top: { r: 110, g: 170, b: 220, a: 255 },
+    bottom: { r: 180, g: 210, b: 235, a: 255 },
   };
-  const sunxPalette = {
-    skyTop: { r: 40, g: 50, b: 100, a: 255 },
-    skyBottom: { r: 230, g: 100, b: 40, a: 255 },
-    ground: { r: 200, g: 190, b: 200, a: 255 },
-    groundDark: { r: 170, g: 155, b: 170, a: 255 },
+  const sunsetSky = {
+    top: { r: 40, g: 50, b: 100, a: 255 },
+    bottom: { r: 230, g: 100, b: 40, a: 255 },
+  };
+  const nightSky = {
+    top: { r: 8, g: 15, b: 45, a: 255 },
+    bottom: { r: 15, g: 30, b: 70, a: 255 },
+  };
 
-    cabinWall: { r: 100, g: 55, b: 35, a: 255 },
-    cabinWallDark: { r: 70, g: 35, b: 20, a: 255 },
-    cabinRoof: { r: 180, g: 160, b: 160, a: 255 },
-    cabinDoor: { r: 50, g: 25, b: 15, a: 255 },
-    cabinWindow: { r: 220, g: 180, b: 80, a: 255 },
-    cabinChimney: { r: 70, g: 35, b: 20, a: 255 },
-    snow: { r: 210, g: 200, b: 210, a: 180 },
-  };
-  const nightPalette = {
-    skyTop: { r: 8, g: 15, b: 30, a: 255 },
-    skyBottom: { r: 15, g: 30, b: 55, a: 255 },
-    ground: { r: 40, g: 50, b: 75, a: 255 },
-    groundDark: { r: 25, g: 35, b: 55, a: 255 },
-
-    cabinWall: { r: 35, g: 25, b: 20, a: 255 },
-    cabinWallDark: { r: 25, g: 15, b: 12, a: 255 },
-    cabinRoof: { r: 45, g: 55, b: 75, a: 255 },
-    cabinDoor: { r: 20, g: 12, b: 8, a: 255 },
-    cabinWindow: { r: 220, g: 190, b: 100, a: 255 },
-    cabinChimney: { r: 25, g: 15, b: 12, a: 255 },
-    snow: { r: 50, g: 60, b: 90, a: 180 },
-  };
+  // Snow particle color palettes
+  const daySnow: RGBAColor = { r: 230, g: 235, b: 245, a: 180 };
+  const sunsetSnow: RGBAColor = { r: 210, g: 200, b: 210, a: 180 };
+  const nightSnow: RGBAColor = { r: 50, g: 60, b: 90, a: 180 };
 
   // Snow particles
   const snowParticles: Array<{ x: number; y: number; color: RGBAColor }> = [];
 
   // Stars
   const stars: Array<{ x: number; y: number; color: RGBAColor }> = [];
-
-  // Ground texture (snow variation)
-  const groundTexture: Array<{ x: number; layer: number }> = [];
-  for (let i = 0; i < GROUND_HEIGHT * 3; i++) {
-    groundTexture.push({
-      x: Math.floor(Math.random() * width),
-      layer: Math.floor(Math.random() * GROUND_HEIGHT),
-    });
-  }
 
   // Smoke particles
   const smokeParticles: Array<{
@@ -440,40 +402,62 @@ export default function (width: number, height: number): IVisualization {
         return;
       }
 
-      // Palette interpolation
-      let palette1 = dayPalette;
-      let palette2 = dayPalette;
-      let paletteLerp = 1.0;
+      // Scene + snow color interpolation
+      let scene1 = dayScene;
+      let scene2 = dayScene;
+      let snow1 = daySnow;
+      let snow2 = daySnow;
+      let sky1 = daySky;
+      let sky2 = daySky;
+      let paletteLerp = 0;
 
       const dayPeriod = getDayPeriod(t, day);
       switch (dayPeriod) {
         case "SunriseStart":
-          palette1 = nightPalette;
-          palette2 = sunxPalette;
+          scene1 = nightScene;
+          scene2 = sunsetScene;
+          snow1 = nightSnow;
+          snow2 = sunsetSnow;
+          sky1 = nightSky;
+          sky2 = sunsetSky;
           paletteLerp =
             (t - day.sunRiseStart) / (day.sunRisePeak - day.sunRiseStart);
           break;
         case "SunriseEnd":
-          palette1 = sunxPalette;
-          palette2 = dayPalette;
+          scene1 = sunsetScene;
+          scene2 = dayScene;
+          snow1 = sunsetSnow;
+          snow2 = daySnow;
+          sky1 = sunsetSky;
+          sky2 = daySky;
           paletteLerp =
             (t - day.sunRisePeak) / (day.sunRiseEnd - day.sunRisePeak);
           break;
         case "Day":
           break;
         case "SunsetStart":
-          palette1 = dayPalette;
-          palette2 = sunxPalette;
+          scene1 = dayScene;
+          scene2 = sunsetScene;
+          snow1 = daySnow;
+          snow2 = sunsetSnow;
+          sky1 = daySky;
+          sky2 = sunsetSky;
           paletteLerp =
             (t - day.sunSetStart) / (day.sunSetPeak - day.sunSetStart);
           break;
         case "SunsetEnd":
-          palette1 = sunxPalette;
-          palette2 = nightPalette;
+          scene1 = sunsetScene;
+          scene2 = nightScene;
+          snow1 = sunsetSnow;
+          snow2 = nightSnow;
+          sky1 = sunsetSky;
+          sky2 = nightSky;
           paletteLerp = (t - day.sunSetPeak) / (day.sunSetEnd - day.sunSetPeak);
           break;
         case "Night":
-          palette1 = palette2 = nightPalette;
+          scene1 = scene2 = nightScene;
+          snow1 = snow2 = nightSnow;
+          sky1 = sky2 = nightSky;
           const interval = 86400 * 1000 - (day.sunSetEnd - day.sunRiseStart);
           if (t < day.sunSetEnd) {
             paletteLerp = (t + (86400 * 1000 - day.sunSetEnd)) / interval;
@@ -533,7 +517,7 @@ export default function (width: number, height: number): IVisualization {
           y: sy,
           color: {
             ...lerp(
-              lerp(palette1.snow, palette2.snow, paletteLerp),
+              lerp(snow1, snow2, paletteLerp),
               { r: 255, g: 255, b: 255, a: 200 },
               Math.random() * 0.3
             ),
@@ -541,10 +525,9 @@ export default function (width: number, height: number): IVisualization {
         });
       }
 
-      // Update smoke particles
-      const chimneySpawnX =
-        cx + Math.floor(CABIN_WIDTH / 2) - 3 + CHIMNEY_WIDTH / 2;
-      const chimneySpawnY = groundY - CABIN_WALL_HEIGHT - CABIN_ROOF_HEIGHT - 2;
+      // Update smoke particles — chimney position from the PNG assets
+      const chimneySpawnX = 41;
+      const chimneySpawnY = 12;
       for (let i = 0; i < smokeParticles.length; ) {
         const s = smokeParticles[i];
         s.age += speed;
@@ -574,46 +557,21 @@ export default function (width: number, height: number): IVisualization {
       // === DRAWING ===
       backbuffer.clear();
 
-      // Sky gradient
+      // Sky gradient (visible through transparent sky in the scene PNGs)
       for (let y = 0; y < height; y++) {
+        const skyT = 1.0 - (y + 1) / height;
         backbuffer
           .fgColor(
             lerp(
-              lerp(palette1.skyBottom, palette2.skyBottom, paletteLerp),
-              lerp(palette1.skyTop, palette2.skyTop, paletteLerp),
-              1.0 - (y + 1) / height
+              lerp(sky1.bottom, sky2.bottom, paletteLerp),
+              lerp(sky1.top, sky2.top, paletteLerp),
+              skyT
             )
           )
           .drawLine(0, y, width, y);
       }
 
-      // Stars (night)
-      if (palette1 === nightPalette || palette2 === nightPalette) {
-        if (stars.length === 0) {
-          for (let i = 0; i < MAX_STARS; i++) {
-            stars.push({
-              x: Math.floor(Math.random() * (width - 1)),
-              y: Math.floor(Math.pow(Math.random(), 2) * (groundY - 1)),
-              color: lerp(
-                { r: 3, g: 15, b: 31, a: 64 },
-                { r: 38, g: 49, b: 58, a: 128 },
-                Math.random()
-              ),
-            });
-          }
-        }
-        backbuffer.blendMode(alphaAdditiveBlend);
-        for (const star of stars) {
-          const skyPixel = backbuffer.getPixel(star.x, star.y);
-          const skyLuminance = colorLuminance(skyPixel);
-          const starLuminance = colorLuminance(star.color);
-          if (starLuminance > skyLuminance) {
-            backbuffer.fgColor(star.color).setPixel(star.x, star.y);
-          }
-        }
-      }
-
-      // Aurora (night / near-night only)
+      // Aurora (night / near-night only) — rendered first, behind the scene PNG
       {
         let auroraAlpha = 0;
         if (dayPeriod === "Night") {
@@ -708,79 +666,43 @@ export default function (width: number, height: number): IVisualization {
         }
       }
 
+      // Stars (night) — behind scene PNG
+      if (scene1 === nightScene || scene2 === nightScene) {
+        if (stars.length === 0) {
+          for (let i = 0; i < MAX_STARS; i++) {
+            stars.push({
+              x: Math.floor(Math.random() * (width - 1)),
+              y: Math.floor(Math.pow(Math.random(), 2) * (height * 0.5)),
+              color: lerp(
+                { r: 3, g: 15, b: 31, a: 64 },
+                { r: 38, g: 49, b: 58, a: 128 },
+                Math.random()
+              ),
+            });
+          }
+        }
+        backbuffer.blendMode(alphaAdditiveBlend);
+        for (const star of stars) {
+          const skyPixel = backbuffer.getPixel(star.x, star.y);
+          const skyLuminance = colorLuminance(skyPixel);
+          const starLuminance = colorLuminance(star.color);
+          if (starLuminance > skyLuminance) {
+            backbuffer.fgColor(star.color).setPixel(star.x, star.y);
+          }
+        }
+        backbuffer.blendMode(null);
+      }
+
+      // Scene PNG — cabin, trees, ground layered over aurora/stars
       backbuffer.blendMode(alphaBlend);
-
-      // Ground (snow-covered)
-      const groundColor = lerp(palette1.ground, palette2.ground, paletteLerp);
-      const groundDarkColor = lerp(
-        palette1.groundDark,
-        palette2.groundDark,
-        paletteLerp
-      );
-      for (let y = groundY; y < height; y++) {
-        backbuffer.fgColor(groundColor).drawLine(0, y, width - 1, y);
-      }
-      for (const tex of groundTexture) {
+      backbuffer.drawAsset(0, 0, scene1);
+      if (paletteLerp > 0) {
         backbuffer
-          .fgColor(groundDarkColor)
-          .setPixel(tex.x, groundY + tex.layer);
+          .blendMode(alphaBlend, paletteLerp)
+          .drawAsset(0, 0, scene2)
+          .blendMode(alphaBlend);
       }
-
-      // Cabin
-      const cl = cx - Math.floor(CABIN_WIDTH / 2);
-      const cr = cl + CABIN_WIDTH;
-      const cabinBase = groundY;
-      const cabinWallTop = cabinBase - CABIN_WALL_HEIGHT;
-      const cabinRoofPeak = cabinWallTop - CABIN_ROOF_HEIGHT;
-
-      // Walls
-      const wallColor = lerp(
-        palette1.cabinWall,
-        palette2.cabinWall,
-        paletteLerp
-      );
-      const wallDarkColor = lerp(
-        palette1.cabinWallDark,
-        palette2.cabinWallDark,
-        paletteLerp
-      );
-      backbuffer
-        .fgColor(wallColor)
-        .fill(cl, cabinWallTop, cr - 1, cabinBase - 1);
-      backbuffer
-        .fgColor(wallDarkColor)
-        .drawLine(cl, cabinWallTop, cl, cabinBase - 1)
-        .drawLine(cr - 1, cabinWallTop, cr - 1, cabinBase - 1);
-
-      // Roof (triangular)
-      const roofColor = lerp(
-        palette1.cabinRoof,
-        palette2.cabinRoof,
-        paletteLerp
-      );
-      backbuffer.fgColor(roofColor);
-      for (let ry = 0; ry < CABIN_ROOF_HEIGHT; ry++) {
-        const roofY = cabinRoofPeak + ry;
-        const halfWidth =
-          Math.floor(((ry + 1) * (CABIN_WIDTH / 2)) / CABIN_ROOF_HEIGHT) + 1;
-        backbuffer.drawLine(cx - halfWidth, roofY, cx + halfWidth, roofY);
-      }
-
-      // Chimney
-      const chimneyColor = lerp(
-        palette1.cabinChimney,
-        palette2.cabinChimney,
-        paletteLerp
-      );
-      const chimneyX = cr - 3;
-      backbuffer
-        .fgColor(chimneyColor)
-        .fill(
-          chimneyX,
-          cabinRoofPeak - 1,
-          chimneyX + CHIMNEY_WIDTH - 1,
-          cabinRoofPeak + 1
-        );
+      backbuffer.blendMode(null);
 
       // Chimney smoke — filled squares that shrink and fade
       backbuffer.blendMode(alphaBlend);
@@ -795,26 +717,6 @@ export default function (width: number, height: number): IVisualization {
           .fill(sx, sy, sx + size - 1, sy + size - 1);
       }
       backbuffer.blendMode(null);
-
-      // Door
-      const doorColor = lerp(
-        palette1.cabinDoor,
-        palette2.cabinDoor,
-        paletteLerp
-      );
-      backbuffer
-        .fgColor(doorColor)
-        .fill(cx - 1, cabinBase - 4, cx + 1, cabinBase - 1);
-
-      // Window (warm glow)
-      const windowColor = lerp(
-        palette1.cabinWindow,
-        palette2.cabinWindow,
-        paletteLerp
-      );
-      backbuffer
-        .fgColor(windowColor)
-        .fill(cl + 2, cabinWallTop + 2, cl + 4, cabinWallTop + 4);
 
       // Snow particles
       backbuffer.blendMode(alphaBlend);
