@@ -221,9 +221,13 @@ export default function (width: number, height: number): IVisualization {
 
   let day: SunInfo | null = null;
 
-  return {
+  const viz = {
     name: "Bonsai",
     volume: 12,
+    debugParams: {
+      timeOfDay: { value: -1, type: "time" as const },
+      moonPhase: { value: -1, type: "number" as const, min: 0, max: 1, increment: 0.01 },
+    },
     run: (
       backbuffer: Backbuffer,
       audio: IAudioPlayer,
@@ -232,6 +236,13 @@ export default function (width: number, height: number): IVisualization {
       t: number
     ) => {
       const speed = dt / BASE_FRAME_TIME;
+
+      if (viz.debugParams.timeOfDay.value >= 0) {
+        const today = new Date(t);
+        const seconds = viz.debugParams.timeOfDay.value;
+        today.setHours(0, 0, 0, 0);
+        t = today.getTime() + seconds * 1000;
+      }
 
       const now = new Date(t);
       if (
@@ -272,6 +283,10 @@ export default function (width: number, height: number): IVisualization {
           };
           prevDate = now;
         }
+      }
+
+      if (viz.debugParams.moonPhase.value >= 0) {
+        phase = viz.debugParams.moonPhase.value;
       }
 
       if (!day) {
@@ -619,4 +634,5 @@ export default function (width: number, height: number): IVisualization {
       }
     },
   };
+  return viz;
 }
