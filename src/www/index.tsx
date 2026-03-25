@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import React from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
@@ -5,6 +6,7 @@ import { FastAverageColorResult } from "fast-average-color";
 import { useVisualizations, Visualization } from "./visualizations.tsx";
 import type { IVisualization } from "../shared/viz/visualization-type.ts";
 import { useHash } from "./useHash.ts";
+import { DebugMenu } from "./debug-menu.tsx";
 
 const AVERAGE_COLOR_BLEND = 0.5;
 
@@ -233,6 +235,9 @@ function VisualizationItem({
           } as React.CSSProperties
         }
       />
+      {!isFullscreen && import.meta.env.DEV && (
+        <DebugMenu viz={viz} />
+      )}
       {!isFullscreen && (
         <div
           className="visualization-name"

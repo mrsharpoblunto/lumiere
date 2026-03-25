@@ -300,7 +300,7 @@ export default function (width: number, height: number): IVisualization {
 
   // Snow particle color palettes
   const daySnow: RGBAColor = { r: 230, g: 235, b: 245, a: 180 };
-  const sunsetSnow: RGBAColor = { r: 210, g: 200, b: 210, a: 180 };
+  const sunsetSnow: RGBAColor = { r: 240, g: 170, b: 180, a: 180 };
   const nightSnow: RGBAColor = { r: 50, g: 60, b: 90, a: 180 };
 
   // Snow particles
@@ -347,9 +347,12 @@ export default function (width: number, height: number): IVisualization {
   let prevLocation: GeoLocationCoordinates | null = null;
   let day: SunInfo | null = null;
 
-  return {
+  const viz = {
     name: "Snowy Cabin",
     volume: 12,
+    debugParams: {
+      timeOfDay: { value: -1, type: "time" as const },
+    },
     run: (
       backbuffer: Backbuffer,
       audio: IAudioPlayer,
@@ -358,6 +361,13 @@ export default function (width: number, height: number): IVisualization {
       t: number
     ) => {
       const speed = dt / BASE_FRAME_TIME;
+
+      if (viz.debugParams.timeOfDay.value >= 0) {
+        const today = new Date(t);
+        const seconds = viz.debugParams.timeOfDay.value;
+        today.setHours(0, 0, 0, 0);
+        t = today.getTime() + seconds * 1000;
+      }
 
       // === Day/night cycle calculation (from bonsai) ===
       const now = new Date(t);
@@ -704,17 +714,22 @@ export default function (width: number, height: number): IVisualization {
       }
       backbuffer.blendMode(null);
 
-      // Chimney smoke — filled squares that shrink and fade
+      // Chimney smoke — brighter during the day, subtler at night
+      const smokeBaseAlpha =
+        dayPeriod === "Day" ? 120
+        : dayPeriod === "Night" ? 40
+        : 80;
       backbuffer.blendMode(alphaBlend);
       for (const s of smokeParticles) {
         const life = s.age / s.ttl;
-        const alpha = Math.round(60 * (1 - life));
+        const alpha = Math.round(smokeBaseAlpha * (1 - life));
         const size = Math.max(1, Math.round(SMOKE_INITIAL_SIZE * (1 - life)));
+        const h = Math.round(s.y) >= chimneySpawnY ? 1 : size;
         const sx = Math.round(s.x);
         const sy = Math.round(s.y);
         backbuffer
           .fgColor({ r: 180, g: 180, b: 190, a: alpha })
-          .fill(sx, sy, sx + size - 1, sy + size - 1);
+          .fill(sx, sy, sx + size - 1, sy + h - 1);
       }
       backbuffer.blendMode(null);
 
@@ -732,4 +747,5 @@ export default function (width: number, height: number): IVisualization {
       backbuffer.blendMode(null);
     },
   };
+  return viz;
 }
