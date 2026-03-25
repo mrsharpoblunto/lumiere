@@ -19,7 +19,6 @@ const SNOW_SPAWN_RATE = 0.08;
 const SNOW_FALL_SPEED = 0.03;
 const SNOW_PARTICLE_MIN_X = 0.2;
 
-
 // Snow flow grid (from bonsai pattern)
 const SNOW_GRID_RESOLUTION = 8;
 const SNOW_ATTRACTOR_DISTANCE = 8;
@@ -478,15 +477,7 @@ export default function (width: number, height: number): IVisualization {
       }
 
       // Audio blending (stub - reuse bonsai audio for now)
-      if (
-        dayPeriod === "Night" ||
-        dayPeriod === "SunsetEnd" ||
-        dayPeriod === "SunriseStart"
-      ) {
-        audio.queue("bonsai-night.mp3");
-      } else {
-        audio.queue("bonsai.mp3");
-      }
+      audio.queue("winter.mp3");
 
       // === UPDATE ===
 
@@ -716,9 +707,7 @@ export default function (width: number, height: number): IVisualization {
 
       // Chimney smoke — brighter during the day, subtler at night
       const smokeBaseAlpha =
-        dayPeriod === "Day" ? 120
-        : dayPeriod === "Night" ? 40
-        : 80;
+        dayPeriod === "Day" ? 120 : dayPeriod === "Night" ? 40 : 80;
       backbuffer.blendMode(alphaBlend);
       for (const s of smokeParticles) {
         const life = s.age / s.ttl;
