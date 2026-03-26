@@ -28,7 +28,7 @@ export class FlowGrid {
   map(cb: (x: number, y: number, v: Vec2) => void) {
     for (let y = 0; y < this.resolution.y; ++y) {
       for (let x = 0; x < this.resolution.x; ++x) {
-        const v = this.vectors[y * this.resolution.y + x];
+        const v = this.vectors[y * this.resolution.x + x];
         cb(x, y, v);
       }
     }

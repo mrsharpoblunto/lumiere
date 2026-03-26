@@ -201,6 +201,12 @@ function hash(x: number, y: number): number {
   return ((n ^ (n >> 16)) & 0x7fffffff) / 0x7fffffff;
 }
 
+function hash3D(x: number, y: number, z: number): number {
+  let n = x * 374761393 + y * 668265263 + z * 1440670441;
+  n = ((n >> 13) ^ n) * 1274126177;
+  return ((n ^ (n >> 16)) & 0x7fffffff) / 0x7fffffff;
+}
+
 // Smooth 2D value noise, returns 0..1
 function valueNoise2D(x: number, y: number): number {
   const ix = Math.floor(x);
@@ -219,6 +225,36 @@ function valueNoise2D(x: number, y: number): number {
     n10 * sx * (1 - sy) +
     n01 * (1 - sx) * sy +
     n11 * sx * sy
+  );
+}
+
+function valueNoise3D(x: number, y: number, z: number): number {
+  const ix = Math.floor(x);
+  const iy = Math.floor(y);
+  const iz = Math.floor(z);
+  const fx = x - ix;
+  const fy = y - iy;
+  const fz = z - iz;
+  const sx = fx * fx * (3 - 2 * fx);
+  const sy = fy * fy * (3 - 2 * fy);
+  const sz = fz * fz * (3 - 2 * fz);
+  const n000 = hash3D(ix, iy, iz);
+  const n100 = hash3D(ix + 1, iy, iz);
+  const n010 = hash3D(ix, iy + 1, iz);
+  const n110 = hash3D(ix + 1, iy + 1, iz);
+  const n001 = hash3D(ix, iy, iz + 1);
+  const n101 = hash3D(ix + 1, iy, iz + 1);
+  const n011 = hash3D(ix, iy + 1, iz + 1);
+  const n111 = hash3D(ix + 1, iy + 1, iz + 1);
+  return (
+    n000 * (1 - sx) * (1 - sy) * (1 - sz) +
+    n100 * sx * (1 - sy) * (1 - sz) +
+    n010 * (1 - sx) * sy * (1 - sz) +
+    n110 * sx * sy * (1 - sz) +
+    n001 * (1 - sx) * (1 - sy) * sz +
+    n101 * sx * (1 - sy) * sz +
+    n011 * (1 - sx) * sy * sz +
+    n111 * sx * sy * sz
   );
 }
 
@@ -242,6 +278,16 @@ function colorGradientNoise(px: number, curveY: number, time: number): number {
   const n2 = valueNoise2D(px * 0.18 - t2 * 0.6, curveY * 0.04 + t2 * 0.4);
   const n3 = valueNoise2D(px * 0.8 + t1 * 0.4, curveY * 0.06 + t2 * 0.2);
   return (n1 - 0.5) * 0.5 + (n2 - 0.5) * 0.4 + (n3 - 0.5) * 0.2;
+}
+
+// X-axis noise that controls how much the color palette is inverted,
+// so pink/magenta can appear where green normally would and vice versa
+function colorCycleNoise(px: number, time: number): number {
+  const t = time * 0.00012;
+  const n1 = valueNoise3D(px * 0.25, 0, t);
+  const n2 = valueNoise3D(px * 0.1, 5.7, t * 0.6);
+  const raw = n1 * 0.6 + n2 * 0.4;
+  return smoothstep(0.2, 0.8, raw);
 }
 
 function smoothstep(edge0: number, edge1: number, x: number): number {
@@ -298,9 +344,9 @@ export default function (width: number, height: number): IVisualization {
   };
 
   // Snow particle color palettes
-  const daySnow: RGBAColor = { r: 230, g: 235, b: 245, a: 180 };
-  const sunsetSnow: RGBAColor = { r: 240, g: 170, b: 180, a: 180 };
-  const nightSnow: RGBAColor = { r: 50, g: 60, b: 90, a: 180 };
+  const daySnow: RGBAColor = { r: 230, g: 235, b: 245, a: 150 };
+  const sunsetSnow: RGBAColor = { r: 240, g: 170, b: 180, a: 150 };
+  const nightSnow: RGBAColor = { r: 50, g: 60, b: 90, a: 150 };
 
   // Snow particles
   const snowParticles: Array<{ x: number; y: number; color: RGBAColor }> = [];
@@ -613,6 +659,7 @@ export default function (width: number, height: number): IVisualization {
             const { curveY } = curveYAtX(px, frameSamples);
             const shimmer = auroraShimmer(px, curveY, t);
             const colorShift = colorGradientNoise(px, curveY, t);
+            const paletteCycle = colorCycleNoise(px, t);
 
             for (let py = 0; py < AURORA_REGION_BOTTOM; py++) {
               const vertDist = py - curveY;
@@ -629,24 +676,28 @@ export default function (width: number, height: number): IVisualization {
               const rawBelowFactor = isBelow
                 ? Math.min(1, vertDist / AURORA_FALLOFF_DOWN)
                 : 0;
-              const belowFactor = Math.max(
+              const shiftedFactor = Math.max(
                 0,
                 Math.min(1, rawBelowFactor + colorShift)
               );
+              const belowFactor =
+                shiftedFactor + (1.0 - shiftedFactor - shiftedFactor) * paletteCycle;
 
+              // Bias toward green — pink only appears at the far end
+              const colorT = belowFactor * belowFactor * belowFactor;
               let r: number;
               let g: number;
               let b: number;
-              if (belowFactor < 0.4) {
-                const f = belowFactor / 0.4;
-                r = 40 + (20 - 40) * f + hue * 30;
+              if (colorT < 0.4) {
+                const f = colorT / 0.4;
+                r = 40 + (30 - 40) * f + hue * 30;
                 g = 220 + (160 - 220) * f;
-                b = 80 + (140 - 80) * f + hue * 40;
+                b = 80 + (120 - 80) * f + hue * 40;
               } else {
-                const f = (belowFactor - 0.4) / 0.6;
-                r = 20 + (120 - 20) * f + hue * 40;
-                g = 160 + (40 - 160) * f;
-                b = 140 + (180 - 140) * f;
+                const f = (colorT - 0.4) / 0.6;
+                r = 30 + (200 - 30) * f + hue * 40;
+                g = 160 + (20 - 160) * f;
+                b = 120 + (100 - 120) * f;
               }
 
               const finalIntensity =
@@ -675,8 +726,8 @@ export default function (width: number, height: number): IVisualization {
               x: Math.floor(Math.random() * (width - 1)),
               y: Math.floor(Math.pow(Math.random(), 2) * (height * 0.5)),
               color: lerp(
-                { r: 3, g: 15, b: 31, a: 64 },
-                { r: 38, g: 49, b: 58, a: 128 },
+                { r: 3, g: 15, b: 31, a: 54 },
+                { r: 38, g: 49, b: 58, a: 112 },
                 Math.random()
               ),
             });
@@ -707,7 +758,7 @@ export default function (width: number, height: number): IVisualization {
 
       // Chimney smoke — brighter during the day, subtler at night
       const smokeBaseAlpha =
-        dayPeriod === "Day" ? 120 : dayPeriod === "Night" ? 40 : 80;
+        dayPeriod === "Day" ? 180 : dayPeriod === "Night" ? 80 : 120;
       backbuffer.blendMode(alphaBlend);
       for (const s of smokeParticles) {
         const life = s.age / s.ttl;
