@@ -1,6 +1,6 @@
 # Lumiere
 
-Control an LED matrix for an animated display on a Raspberry Pi. If you want to see some of the animations in your browser, check out [vibes.pixelheart.io](https://vibes.pixelheart.io/).
+Control an LED matrix for an animated display on a Raspberry Pi. If you want to see some of the animations in your browser, check out [pixelheart.io](https://pixelheart.io/).
 
 ![Fireplace installation](/fireplace.gif)
 
@@ -45,6 +45,29 @@ sudo loginctl enable-linger pi
 ```
 pactl set-default-sink alsa_output.usb-Generic_USB2.0_Device_20130101ph0-00.analog-stereo
 ```
+
+## The website
+
+The browser build of the animations is served at [pixelheart.io](https://pixelheart.io/) by Cloudflare Workers.
+
+- `npm run dev:www` runs it locally with hot reloading.
+- `npm run build:www` builds it into `dist/www`, and `npx wrangler dev` serves that build as Cloudflare does.
+
+Each push to `main` runs `.github/workflows/main.yml`, which builds the site and deploys two Workers with `wrangler deploy`:
+
+| Config | Worker | Purpose |
+| --- | --- | --- |
+| `wrangler.jsonc` | `pixelheart-io` | Serves `dist/www` at `pixelheart.io` as static assets. No Worker code runs for these requests. |
+| `wrangler.redirect.jsonc` | `pixelheart-io-redirect` | Redirects `vibes.pixelheart.io` and `www.pixelheart.io` to `pixelheart.io`. |
+
+A pull request builds the site and checks the two configs with a dry run, but does not deploy.
+
+The workflow needs two secrets in the GitHub repository:
+
+- `CLOUDFLARE_API_TOKEN`: an API token from the **Edit Cloudflare Workers** template, limited to the account and to the `pixelheart.io` zone.
+- `CLOUDFLARE_ACCOUNT_ID`: the Cloudflare account ID.
+
+A hostname that still has DNS records of its own cannot become a custom domain of a Worker, and the deploy fails with error 100117: delete those records before the first deploy.
 
 ## Using LetsEncrypt
 
