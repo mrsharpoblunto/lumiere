@@ -1,0 +1,13 @@
+// The Worker that redirects the hostnames the site used to have to pixelheart.io.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pixelheart-io-redirect",
+  "main": "src/www/redirect-worker.ts",
+  "compatibility_date": "2026-11-16",
+  "routes": [
+    { "pattern": "vibes.pixelheart.io", "custom_domain": true },
+    { "pattern": "www.pixelheart.io", "custom_domain": true }
+  ],
+  "workers_dev": false,
+  "preview_urls": false
+}
